@@ -1,42 +1,132 @@
 [
   {
-    "patient_id": "PT_001_CKD4_DM",
+    "patient_id": "PT_001",
+    "name": "Robert Miller",
+    "age": 68,
+    "gender": "Male",
     "conditions": [
       "CKD_Stage_4_5",
       "Type_2_Diabetes"
-    ]
+    ],
+    "egfr": 22.0,
+    "sbp": 138,
+    "dbp": 84,
+    "hba1c": 9.2,
+    "creatinine": 3.1,
+    "symptoms": [
+      "Bilateral pedal edema",
+      "Fatigue",
+      "Polydipsia",
+      "Nocturia"
+    ],
+    "clinical_narrative": "68-year-old male with longstanding Type 2 Diabetes presenting with progressive bilateral lower extremity edema, worsening fatigue, polydipsia, and marked nocturia. Labs reveal eGFR 22 mL/min/1.73m2 (KDIGO Stage 4) and HbA1c 9.2% reflecting uncontrolled hyperglycemia.",
+    "expected_drug": "Insulin (basal or prandial regimen)"
   },
   {
-    "patient_id": "PT_002_CKD5_HTN",
+    "patient_id": "PT_002",
+    "name": "Eleanor Vance",
+    "age": 72,
+    "gender": "Female",
     "conditions": [
       "CKD_Stage_4_5",
       "Hypertension"
-    ]
+    ],
+    "egfr": 14.0,
+    "sbp": 165,
+    "dbp": 95,
+    "hba1c": 5.6,
+    "creatinine": 4.2,
+    "symptoms": [
+      "Severe lethargy",
+      "Generalized pruritus",
+      "Morning occipital headaches",
+      "Anorexia"
+    ],
+    "clinical_narrative": "72-year-old female presenting with severe lethargy, uremic pruritus, anorexia, and morning occipital headaches. Renal panel demonstrates advanced renal failure with eGFR 14 mL/min/1.73m2 (KDIGO Stage 5 / Kidney Failure) alongside Stage 2 Essential Hypertension (165/95 mmHg). Normal glycemic profile.",
+    "expected_drug": "Amlodipine"
   },
   {
-    "patient_id": "PT_003_DM_CKD1",
+    "patient_id": "PT_003",
+    "name": "David Chen",
+    "age": 54,
+    "gender": "Male",
     "conditions": [
       "Type_2_Diabetes"
-    ]
+    ],
+    "egfr": 88.0,
+    "sbp": 124,
+    "dbp": 78,
+    "hba1c": 8.4,
+    "creatinine": 0.9,
+    "symptoms": [
+      "Mild fatigue",
+      "Polydipsia"
+    ],
+    "clinical_narrative": "54-year-old male presenting for initial glycemic management. Patient reports mild fatigue and thirst. Renal function is well preserved with eGFR 88 mL/min/1.73m2. HbA1c is 8.4%. Normotensive without peripheral edema.",
+    "expected_drug": "Metformin"
   },
   {
-    "patient_id": "PT_004_HTN_ONLY",
+    "patient_id": "PT_004",
+    "name": "Margaret Thorne",
+    "age": 61,
+    "gender": "Female",
     "conditions": [
       "Hypertension"
-    ]
+    ],
+    "egfr": 78.0,
+    "sbp": 152,
+    "dbp": 94,
+    "hba1c": 5.4,
+    "creatinine": 1.0,
+    "symptoms": [
+      "Occipital headaches",
+      "Mild dizziness"
+    ],
+    "clinical_narrative": "61-year-old female with persistent Stage 2 Essential Hypertension (152/94 mmHg) and occasional occipital headaches. Renal biomarkers are stable with eGFR 78 mL/min/1.73m2 and normal fasting glucose.",
+    "expected_drug": "Amlodipine 10mg"
   },
   {
-    "patient_id": "PT_005_DM_HTN_CKD4",
+    "patient_id": "PT_005",
+    "name": "Arthur Pendelton",
+    "age": 65,
+    "gender": "Male",
     "conditions": [
       "CKD_Stage_4_5",
       "Type_2_Diabetes",
       "Hypertension"
-    ]
+    ],
+    "egfr": 18.0,
+    "sbp": 160,
+    "dbp": 98,
+    "hba1c": 9.8,
+    "creatinine": 3.6,
+    "symptoms": [
+      "Bilateral pedal edema",
+      "Shortness of breath",
+      "Severe fatigue"
+    ],
+    "clinical_narrative": "65-year-old male presenting with triple cardiometabolic multimorbidity: uncontrolled Type 2 Diabetes (HbA1c 9.8%), severe Stage 2 Hypertension (160/98 mmHg), and advanced CKD Stage 4 (eGFR 18 mL/min/1.73m2) with dependent pedal edema.",
+    "expected_drug": "Insulin Regimen / Amlodipine"
   },
   {
-    "patient_id": "PT_006_CKD4_ASYMP",
+    "patient_id": "PT_006",
+    "name": "Martha Jenkins",
+    "age": 64,
+    "gender": "Female",
     "conditions": [
       "CKD_Stage_4_5"
-    ]
+    ],
+    "egfr": 21.0,
+    "sbp": 128,
+    "dbp": 80,
+    "hba1c": 5.4,
+    "creatinine": 3.2,
+    "symptoms": [
+      "Generalized pruritus",
+      "Nocturia",
+      "Fatigue"
+    ],
+    "clinical_narrative": "64-year-old female with isolated Stage 4 Chronic Kidney Disease (eGFR 21 mL/min/1.73m2), generalized pruritus, nocturia, and fatigue. Glycemic indices and systemic blood pressure are within acceptable parameters.",
+    "expected_drug": "Insulin / Amlodipine"
   }
 ]

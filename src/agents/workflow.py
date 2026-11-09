@@ -1,4 +1,5 @@
-from typing import TypedDict, List, Optional, Dict, Any, Callable
+import time
+from typing import TypedDict, List, Optional, Dict, Any, Callable, Tuple
 from src.agents.llm_client import LLMClinicalAgent
 from src.retrieval.hybrid_retriever import HybridClinicalRetriever
 
@@ -67,18 +68,45 @@ except ImportError:
 
 class AgentState(TypedDict):
     patient_id: str
+    patient_name: Optional[str]
+    age: Optional[int]
+    gender: Optional[str]
     conditions: List[str]
+    symptoms: Optional[List[str]]
+    lab_values: Optional[dict]
+    clinical_narrative: Optional[str]
+    
+    # RAG Context
     retrieved_context: Optional[str]
+    retrieved_passages: Optional[List[dict]]
+    
+    # Generated Proposal
+    diagnosed_condition: Optional[str]
+    icd10_code: Optional[str]
     proposed_medication: Optional[str]
     reasoning: Optional[str]
+    differential_diagnoses: Optional[List[str]]
+    patient_friendly_summary: Optional[str]
+    warnings: Optional[List[str]]
+    
+    # Verification & Orchestration State
     retries: int
     max_retries: int
     violations: List[str]
     status: str
+    verification_details: Optional[dict]
+    chronological_trace: List[dict]
+    
+    # Provider options
+    provider: Optional[str]
+    model_name: Optional[str]
+    api_key: Optional[str]
+    
+    # Output payload
     final_output: dict
 
 
-# Lazy global instances for backward compatibility
+# Lazy global instances for high performance
 _GLOBAL_LLM = None
 _GLOBAL_RETRIEVER = None
 
@@ -95,57 +123,126 @@ def get_retriever() -> HybridClinicalRetriever:
     return _GLOBAL_RETRIEVER
 
 
+def log_step(state: AgentState, stage: str, message: str, meta: Optional[dict] = None):
+    """Appends an auditable transition event to chronological trace."""
+    if "chronological_trace" not in state or state["chronological_trace"] is None:
+        state["chronological_trace"] = []
+    
+    step_num = len(state["chronological_trace"]) + 1
+    state["chronological_trace"].append({
+        "step": step_num,
+        "stage": stage,
+        "message": message,
+        "meta": meta or {},
+        "timestamp": time.time()
+    })
+
+
+def ingest_node(state: AgentState):
+    """Initializes and normalizes patient intake profile."""
+    pid = state.get("patient_id", "Patient_Unknown")
+    conds = state.get("conditions", [])
+    log_step(
+        state,
+        "INGESTION",
+        f"Patient {pid} presentation ingested with documented conditions: {', '.join(conds) if conds else 'None'}",
+        {"patient_id": pid, "conditions": conds}
+    )
+    return state
+
+
 def retrieve_node(state: AgentState, retriever: HybridClinicalRetriever):
-    """Retrieves relevant guideline chunks using FAISS + BM25 RRF (bypassing if already retrieved)."""
-    if state.get("retrieved_context"):
+    """Retrieves relevant guideline chunks using FAISS + BM25 RRF."""
+    if state.get("retrieved_context") and state.get("retrieved_passages"):
         return state
 
-    query = f"Management of patient with {', '.join(state['conditions'])}"
-    print(f"\n[Hybrid RAG] Retrieving guidelines for: {query}...")
-    context = retriever.retrieve_context(query, top_k=2)
-    state["retrieved_context"] = context
+    conds_text = ", ".join(state.get("conditions", []))
+    query = f"Management of cardiometabolic patient with {conds_text}"
+    
+    passages = retriever.retrieve_passages_with_scores(query, top_k=3)
+    context_str = retriever.retrieve_context(query, top_k=3)
+    
+    state["retrieved_passages"] = passages
+    state["retrieved_context"] = context_str
+    
+    log_step(
+        state,
+        "RETRIEVAL",
+        f"Hybrid RAG retrieved {len(passages)} authoritative guideline passages (RRF k=60).",
+        {"passages_count": len(passages), "top_source": passages[0]["source"] if passages else ""}
+    )
     return state
 
 
 def generate_hypothesis_node(state: AgentState, llm_agent: LLMClinicalAgent):
-    attempt = state["retries"] + 1
-    print(f"\n[LLaMA Agent] Generating hypothesis (Attempt {attempt})...")
+    attempt = state.get("retries", 0) + 1
+    provider = state.get("provider", "local")
+    model_name = state.get("model_name")
+    api_key = state.get("api_key")
+    lab_vals = state.get("lab_values")
     
     response = llm_agent.generate_recommendation(
         patient_id=state["patient_id"],
         conditions=state["conditions"],
         guidelines=state.get("retrieved_context") or "None",
-        violations=state.get("violations", [])
+        violations=state.get("violations", []),
+        provider=provider,
+        model_name=model_name,
+        api_key=api_key,
+        lab_values=lab_vals
     )
     
     state["proposed_medication"] = response["medication"]
     state["reasoning"] = response["reasoning"]
-    print(f"[LLaMA Agent] Proposed Medication: {state['proposed_medication']}")
-    print(f"[LLaMA Agent] Clinical Rationale: {state['reasoning']}")
+    state["diagnosed_condition"] = response.get("diagnosed_condition", "Cardiometabolic Multimorbidity")
+    state["icd10_code"] = response.get("icd10_code", "R69")
+    state["differential_diagnoses"] = response.get("differential_diagnoses", [])
+    state["patient_friendly_summary"] = response.get("patient_friendly_summary", "")
+    state["warnings"] = response.get("warnings", [])
     
+    log_step(
+        state,
+        "GENERATION",
+        f"Attempt {attempt}: Proposing '{state['proposed_medication']}' for {state['diagnosed_condition']} [{state['icd10_code']}]",
+        {"medication": state["proposed_medication"], "attempt": attempt, "provider": provider}
+    )
     return state
 
 
 def verify_node(state: AgentState, verifier):
     medication = state.get("proposed_medication", "")
-    print(f"\n[HermiT Gate] Verifying '{medication}' against ontology...")
+    patient_id = state.get("patient_id", "Patient_Case")
+    conditions = state.get("conditions", [])
     
     result = verifier.verify_prescription(
-        patient_id=state["patient_id"],
-        conditions=state["conditions"],
+        patient_id=patient_id,
+        conditions=conditions,
         medications=[medication]
     )
     
+    state["verification_details"] = result
+    
     if result["status"] == "PASS":
-        print("[HermiT Gate] RESULT: PASSED (Zero Ontological Violations).")
         state["status"] = "VERIFIED"
+        log_step(
+            state,
+            "VERIFICATION",
+            f"HermiT OWL 2 DL reasoner: PASSED (Zero formal contraindications detected).",
+            {"status": "PASS", "latency_ms": result["reasoner_latency_ms"]}
+        )
     else:
-        print(f"[HermiT Gate] RESULT: FAILED -> {result['violated_axiom']}")
         state["status"] = "FAILED"
-        if "violations" not in state:
+        if "violations" not in state or state["violations"] is None:
             state["violations"] = []
         state["violations"].append(result["violated_axiom"])
-        state["retries"] += 1
+        state["retries"] = state.get("retries", 0) + 1
+        
+        log_step(
+            state,
+            "VERIFICATION",
+            f"HermiT OWL 2 DL reasoner: FAILED -> Intercepted contraindication: {result['violated_axiom']}",
+            {"status": "FAIL", "axiom": result["violated_axiom"], "retry": state["retries"]}
+        )
         
     return state
 
@@ -160,46 +257,85 @@ def route_next_step(state: AgentState):
 
 
 def finalize_node(state: AgentState):
+    log_step(
+        state,
+        "FINALIZATION",
+        f"Approved verified clinical output for {state['patient_id']} [{state.get('icd10_code')}].",
+        {"status": "APPROVED"}
+    )
+    
     state["final_output"] = {
         "status": "APPROVED",
         "patient_id": state["patient_id"],
-        "recommended_treatment": state["proposed_medication"],
-        "clinical_rationale": state["reasoning"],
+        "patient_name": state.get("patient_name", "Clinical Patient"),
+        "diagnosed_condition": state.get("diagnosed_condition", "Cardiometabolic Multimorbidity"),
+        "icd10_code": state.get("icd10_code", "R69"),
+        "differential_diagnoses": state.get("differential_diagnoses", []),
+        "recommended_treatment": state.get("proposed_medication"),
+        "clinical_rationale": state.get("reasoning"),
+        "patient_friendly_summary": state.get("patient_friendly_summary"),
+        "warnings": state.get("warnings", []),
+        "retrieved_passages": state.get("retrieved_passages", []),
         "evidence_context": state.get("retrieved_context"),
-        "total_attempts": state["retries"] + 1,
-        "audit_trail": state.get("violations", [])
+        "verification_details": state.get("verification_details"),
+        "total_attempts": state.get("retries", 0) + 1,
+        "retries_count": state.get("retries", 0),
+        "audit_trail": state.get("violations", []),
+        "chronological_trace": state.get("chronological_trace", []),
+        "intercepted_violations": state.get("violations", [])
     }
     return state
 
 
 def escalate_node(state: AgentState):
+    log_step(
+        state,
+        "ESCALATION",
+        f"Maximum retries exhausted ({state.get('retries')}). Fail-closed escalation for human specialist review.",
+        {"status": "ESCALATED"}
+    )
+    
     state["final_output"] = {
         "status": "ESCALATED_FOR_HUMAN_REVIEW",
         "patient_id": state["patient_id"],
+        "patient_name": state.get("patient_name", "Clinical Patient"),
+        "diagnosed_condition": state.get("diagnosed_condition", "Cardiometabolic Multimorbidity"),
+        "icd10_code": state.get("icd10_code", "R69"),
         "last_proposed_treatment": state.get("proposed_medication"),
-        "reason": "Maximum retry limit reached without resolving formal clinical violations.",
-        "audit_trail": state.get("violations", [])
+        "reason": "Maximum retry limit reached without resolving formal clinical violations. Fail-closed safety gate engaged.",
+        "retrieved_passages": state.get("retrieved_passages", []),
+        "verification_details": state.get("verification_details"),
+        "total_attempts": state.get("retries", 0),
+        "audit_trail": state.get("violations", []),
+        "chronological_trace": state.get("chronological_trace", []),
+        "intercepted_violations": state.get("violations", [])
     }
     return state
 
 
-def build_safecds_graph(verifier, llm_agent: Optional[LLMClinicalAgent] = None, retriever: Optional[HybridClinicalRetriever] = None):
+def build_safecds_graph(
+    verifier,
+    llm_agent: Optional[LLMClinicalAgent] = None,
+    retriever: Optional[HybridClinicalRetriever] = None
+):
     """
     Builds and compiles the SafeCDS LangGraph state machine.
-    Supports dependency injection for high performance and mockability.
+    Enforces the fail-closed neuro-symbolic verification and self-correction loop.
     """
     active_llm = llm_agent or get_llm_agent()
     active_retriever = retriever or get_retriever()
     
     workflow = StateGraph(AgentState)
     
+    workflow.add_node("ingest", ingest_node)
     workflow.add_node("retrieve", lambda s: retrieve_node(s, active_retriever))
     workflow.add_node("generate_hypothesis", lambda s: generate_hypothesis_node(s, active_llm))
     workflow.add_node("verify", lambda s: verify_node(s, verifier))
     workflow.add_node("finalize", finalize_node)
     workflow.add_node("escalate", escalate_node)
     
-    workflow.set_entry_point("retrieve")
+    workflow.set_entry_point("ingest")
+    workflow.add_edge("ingest", "retrieve")
     workflow.add_edge("retrieve", "generate_hypothesis")
     workflow.add_edge("generate_hypothesis", "verify")
     

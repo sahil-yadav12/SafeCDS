@@ -1,15 +1,39 @@
 [
   {
+    "id": "KDIGO_CKD_STAGING_2023",
+    "source": "KDIGO 2023 Clinical Practice Guideline for CKD Evaluation",
+    "topic": "Glomerular Filtration Rate (eGFR) Staging Thresholds",
+    "text": "Chronic Kidney Disease (CKD) is classified by sustained reduction in glomerular filtration rate: Stage 1 (eGFR >= 90 with kidney damage/albuminuria), Stage 2 (eGFR 60-89, mild decline), Stage 3a (eGFR 45-59, mild-moderate), Stage 3b (eGFR 30-44, moderate-severe), Stage 4 (eGFR 15-29 mL/min/1.73m2, severely decreased), and Stage 5 (eGFR < 15 mL/min/1.73m2, kidney failure/end-stage renal disease). Staging strictly directs diagnostic coding and specialist nephrology referral."
+  },
+  {
     "id": "KDIGO_CKD_DM_2023_01",
     "source": "KDIGO 2023 Clinical Practice Guideline",
     "topic": "Metformin in Chronic Kidney Disease",
-    "text": "Metformin is recommended as first-line therapy in patients with Type 2 Diabetes and CKD when eGFR >= 45 mL/min/1.73m2 (Stage 1-3a). Metformin dose should be halved if eGFR is between 30 and 44 mL/min/1.73m2 (Stage 3b). Metformin is strictly contraindicated in advanced CKD with eGFR < 30 mL/min/1.73m2 (Stage 4 and Stage 5) due to the substantial risk of lactic acidosis."
+    "text": "Metformin is recommended as first-line therapy in patients with Type 2 Diabetes and CKD when eGFR >= 45 mL/min/1.73m2 (Stage 1-3a). Metformin dose should be halved if eGFR is between 30 and 44 mL/min/1.73m2 (Stage 3b). Metformin is strictly contraindicated in advanced CKD with eGFR < 30 mL/min/1.73m2 (Stage 4 and Stage 5) due to the substantial risk of fatal lactic acidosis."
   },
   {
     "id": "KDIGO_CKD_HTN_2023_02",
     "source": "KDIGO 2023 Blood Pressure Guideline",
     "topic": "RAAS Blockade & Calcium Channel Blockers in Advanced CKD",
-    "text": "Initiating or escalating high-dose ACE inhibitors (e.g., Lisinopril) or ARBs in advanced CKD Stage 4 or Stage 5 (eGFR < 30 mL/min/1.73m2) requires caution due to risks of hyperkalemia and acute decline in glomerular filtration. Dihydropyridine Calcium Channel Blockers (such as Amlodipine) are preferred second-line or alternative antihypertensive agents in severe renal impairment as they do not affect renal hemodynamics or serum potassium."
+    "text": "Initiating or escalating high-dose ACE inhibitors (e.g., Lisinopril) or ARBs in advanced CKD Stage 4 or Stage 5 (eGFR < 30 mL/min/1.73m2) carries severe risk of life-threatening hyperkalemia and acute precipitously dropped glomerular filtration. Dihydropyridine Calcium Channel Blockers (such as Amlodipine) are preferred first-line alternative antihypertensive agents in severe renal impairment as they preserve renal hemodynamics without elevating serum potassium."
+  },
+  {
+    "id": "KDIGO_AKI_VS_CKD_DIFF",
+    "source": "KDIGO 2023 Guideline for Kidney Disease Evaluation",
+    "topic": "Differential Diagnosis: Acute Kidney Injury vs Chronic Kidney Disease",
+    "text": "When eGFR is depressed, clinical history must differentiate between acute kidney injury (rapid rise in serum creatinine within hours to days) and chronic kidney disease (sustained eGFR reduction >= 3 months). In chronic presentations with longstanding cardiometabolic history, bilateral renal changes and persistent proteinuria, chronic kidney disease staging is verified."
+  },
+  {
+    "id": "ACC_AHA_BP_THRESHOLDS_2017",
+    "source": "ACC/AHA 2017 Guideline for High Blood Pressure in Adults",
+    "topic": "Blood Pressure Staging and Diagnostic Thresholds",
+    "text": "Blood pressure categories in adults: Normal Blood Pressure (Systolic BP < 120 mmHg and Diastolic BP < 80 mmHg); Elevated Blood Pressure (SBP 120-129 mmHg and DBP < 80 mmHg); Stage 1 Essential Hypertension (SBP 130-139 mmHg or DBP 80-89 mmHg); Stage 2 Essential Hypertension (SBP >= 140 mmHg or DBP >= 90 mmHg). Hypertensive Crisis is diagnosed when SBP > 180 mmHg and/or DBP > 120 mmHg."
+  },
+  {
+    "id": "ACC_AHA_HTN_2023_FIRST_LINE",
+    "source": "ACC/AHA Guideline for the Prevention and Management of High Blood Pressure",
+    "topic": "First-Line Antihypertensive Therapy",
+    "text": "For initial management of uncomplicated primary hypertension in patients with normal kidney function, first-line classes include ACE inhibitors (such as Lisinopril), Angiotensin Receptor Blockers (ARBs), or Calcium Channel Blockers (such as Amlodipine)."
   },
   {
     "id": "ADA_GLY_2024_03",
@@ -24,9 +48,9 @@
     "text": "First-line therapy for Type 2 Diabetes with normal renal function or early-stage disease consists of Metformin along with comprehensive lifestyle modification. Metformin provides high glycemic efficacy, low risk of hypoglycemia, and weight neutrality."
   },
   {
-    "id": "ACC_AHA_HTN_2023_FIRST_LINE",
-    "source": "ACC/AHA Guideline for the Prevention and Management of High Blood Pressure",
-    "topic": "First-Line Antihypertensive Therapy",
-    "text": "For initial management of uncomplicated primary hypertension in patients with normal kidney function, first-line classes include ACE inhibitors (such as Lisinopril), Angiotensin Receptor Blockers (ARBs), or Calcium Channel Blockers (such as Amlodipine)."
+    "id": "KDIGO_POTASSIUM_RAAS_2023",
+    "source": "KDIGO 2023 Cardiometabolic Consensus",
+    "topic": "Potassium Homeostasis & Renoprotection",
+    "text": "Serum potassium exceeding 5.0 mEq/L mandates review of potassium-sparing medications and RAAS inhibitors. In CKD Stages 4-5, hyperkalemia risk escalates exponentially with Lisinopril, making Amlodipine the optimal non-potassium-affecting vasodilator."
   }
 ]
