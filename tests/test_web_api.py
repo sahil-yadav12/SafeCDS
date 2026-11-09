@@ -96,3 +96,16 @@ def test_benchmark_endpoint():
     assert bm["metrics"]["overall_safe_rate"] == 100.0
     assert bm["metrics"]["formal_violation_escape_rate"] == 0.0
     assert bm["metrics"]["self_correction_rate"] == 100.0
+
+def test_patient_chat_endpoint():
+    payload = {
+        "message": "I have Type 2 Diabetes and my eGFR is 22 mL/min. What medicine can I take?",
+        "provider": "local"
+    }
+    response = client.post("/api/chat", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "success"
+    assert "reply" in data
+    assert "Insulin" in data["reply"] or "Metformin avoided" in data["reply"]
+    assert "CKD_Stage_4_5" in data["detected_conditions"]
