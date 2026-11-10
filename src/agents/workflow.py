@@ -326,6 +326,9 @@ def generate_hypothesis_node(state: AgentState, llm_agent: LLMClinicalAgent):
         model_name=model_name,
         api_key=api_key,
         lab_values=lab_vals,
+        clinical_narrative=state.get("clinical_narrative"),
+        age=state.get("age"),
+        gender=state.get("gender"),
         evaluation_id=state.get("evaluation_id")
     )
     
@@ -336,6 +339,9 @@ def generate_hypothesis_node(state: AgentState, llm_agent: LLMClinicalAgent):
     state["differential_diagnoses"] = response.get("differential_diagnoses", [])
     state["patient_friendly_summary"] = response.get("patient_friendly_summary", "")
     state["warnings"] = response.get("warnings", [])
+    state["model_used"] = response.get("model_used", model_name or "qwen2.5:3b")
+    state["provider_used"] = response.get("provider_used", provider)
+    state["inference_latency_ms"] = response.get("inference_latency_ms", 0.0)
     if response.get("clinical_alerts"):
         cur_alerts = state.get("clinical_alerts") or []
         for alert in response["clinical_alerts"]:
@@ -681,7 +687,10 @@ def finalize_node(state: AgentState):
         "retries_count": state.get("retries", 0),
         "audit_trail": state.get("violations", []),
         "chronological_trace": state.get("chronological_trace", []),
-        "intercepted_violations": state.get("violations", [])
+        "intercepted_violations": state.get("violations", []),
+        "model_used": state.get("model_used", state.get("model_name") or "qwen2.5:3b"),
+        "provider_used": state.get("provider_used", state.get("provider", "local")),
+        "inference_latency_ms": state.get("inference_latency_ms", 0.0)
     }
     
     if p_ctx:
@@ -739,7 +748,10 @@ def escalate_node(state: AgentState):
         "total_attempts": state.get("retries", 0),
         "audit_trail": state.get("violations", []),
         "chronological_trace": state.get("chronological_trace", []),
-        "intercepted_violations": state.get("violations", [])
+        "intercepted_violations": state.get("violations", []),
+        "model_used": state.get("model_used", state.get("model_name") or "qwen2.5:3b"),
+        "provider_used": state.get("provider_used", state.get("provider", "local")),
+        "inference_latency_ms": state.get("inference_latency_ms", 0.0)
     }
     
     if p_ctx:

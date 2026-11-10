@@ -120,6 +120,10 @@ def validate_final_clinical_response(
     if context.is_type_1_diabetes:
         if "replace insulin" in rec_treatment or "stop insulin" in rec_treatment:
             errors.append("Critical Safety Conflict: Insulin therapy in Type 1 Diabetes cannot be replaced.")
+        if "metformin" in rec_treatment and "insulin" not in rec_treatment:
+            errors.append("Critical Safety Conflict: Metformin monotherapy cannot substitute for essential insulin in Type 1 Diabetes.")
+        if "insulin" not in rec_treatment and "insulin" not in all_text.lower():
+            errors.append("Critical Safety Conflict: Type 1 Diabetes requires essential subcutaneous insulin therapy.")
     if egfr is not None and egfr < 30.0 and "metformin" in rec_treatment:
         errors.append(f"Medication Contraindication Error: Metformin proposed at eGFR {egfr} (< 30 mL/min/1.73m²).")
 

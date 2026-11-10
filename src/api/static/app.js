@@ -380,7 +380,9 @@ document.addEventListener("DOMContentLoaded", () => {
             e.preventDefault();
 
             const selectedConditions = Array.from(document.querySelectorAll(".condition-checkbox:checked")).map(cb => cb.value);
-            const provider = providerSelect.value;
+            const rawProvider = providerSelect.value;
+            const provider = (rawProvider === "local-llama" || rawProvider === "local") ? "local" : rawProvider;
+            const modelName = rawProvider === "local-llama" ? "llama3.2:3b" : (rawProvider === "local" ? "qwen2.5:3b" : "");
             const apiKey = provider === "gemini" ? apiKeys.gemini : (provider === "openai" ? apiKeys.openai : "");
 
             const potInput = document.getElementById("input-potassium");
@@ -403,6 +405,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 },
                 clinical_narrative: document.getElementById("clinical-narrative").value.trim(),
                 provider: provider,
+                model_name: modelName,
                 api_key: apiKey
             };
 
@@ -752,7 +755,9 @@ document.addEventListener("DOMContentLoaded", () => {
             chatInput.value = "";
 
             const typingEl = appendChatTyping();
-            const provider = providerSelect.value;
+            const rawProvider = providerSelect.value;
+            const provider = (rawProvider === "local-llama" || rawProvider === "local") ? "local" : rawProvider;
+            const modelName = rawProvider === "local-llama" ? "llama3.2:3b" : (rawProvider === "local" ? "qwen2.5:3b" : "");
             const apiKey = provider === "gemini" ? apiKeys.gemini : (provider === "openai" ? apiKeys.openai : "");
 
             try {
@@ -766,6 +771,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         conditions: chatAttachedContext.conditions,
                         lab_values: chatAttachedContext.lab_values,
                         provider: provider,
+                        model_name: modelName,
                         api_key: apiKey
                     })
                 });

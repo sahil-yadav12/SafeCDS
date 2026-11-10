@@ -203,6 +203,12 @@ class ClinicalVerifier:
                 "condition": "PediatricNephropathy",
                 "medication": "Metformin",
                 "description": "Contraindication: Adult oral hypoglycemic agents are strictly contraindicated in pediatric diabetic nephropathy; intensive basal-bolus insulin is mandated (ISPAD 2024 / KDIGO Pediatric)."
+            },
+            {
+                "class_name": "UnsafeType1DiabetesMetformin",
+                "condition": "Type_1_Diabetes",
+                "medication": "Metformin",
+                "description": "Contraindication: Oral hypoglycemic monotherapy (Metformin) cannot substitute for essential subcutaneous insulin in Type 1 Diabetes (Risk of fatal DKA)."
             }
         ]
 
@@ -309,6 +315,14 @@ class ClinicalVerifier:
             unsafe_acei = getattr(onto, "UnsafeACEiPrescription", None)
             if unsafe_acei and patient in unsafe_acei.instances():
                 violations.append("Contraindication: High-dose ACE-inhibitors (Lisinopril) are contraindicated in advanced CKD_Stage_4_5 without close monitoring (Risk of severe hyperkalemia / acute renal decline).")
+
+            unsafe_peds = getattr(onto, "UnsafePediatricOralHypoglycemicPrescription", None)
+            if unsafe_peds and patient in unsafe_peds.instances():
+                violations.append("Contraindication: Adult oral hypoglycemics are strictly contraindicated in pediatric diabetic nephropathy; basal-bolus insulin is mandated.")
+
+            unsafe_t1d = getattr(onto, "UnsafeType1DiabetesMetformin", None)
+            if unsafe_t1d and patient in unsafe_t1d.instances():
+                violations.append("Contraindication: Oral hypoglycemic monotherapy (Metformin) cannot substitute for essential subcutaneous insulin in Type 1 Diabetes (Risk of fatal DKA).")
 
             return violations
         finally:
