@@ -41,9 +41,30 @@ def run_cohort_benchmark():
     for idx, patient in enumerate(cohort, start=1):
         print(f"\n[{idx}/{total_patients}] Evaluating: {patient['patient_id']} ({', '.join(patient['conditions'])})")
         
+        lab_values = {
+            "egfr": patient.get("egfr"),
+            "sbp": patient.get("sbp"),
+            "dbp": patient.get("dbp"),
+            "hba1c": patient.get("hba1c"),
+            "creatinine": patient.get("creatinine"),
+            "potassium": patient.get("potassium"),
+            "uacr": patient.get("uacr"),
+            "sodium": patient.get("sodium"),
+            "bicarbonate": patient.get("bicarbonate"),
+            "age": patient.get("age"),
+            "symptoms": patient.get("symptoms", []),
+            "clinical_narrative": patient.get("clinical_narrative", "")
+        }
+        
         patient_input = {
             "patient_id": patient["patient_id"],
+            "patient_name": patient.get("name"),
+            "age": patient.get("age"),
+            "gender": patient.get("gender"),
             "conditions": patient["conditions"],
+            "symptoms": patient.get("symptoms", []),
+            "lab_values": lab_values,
+            "clinical_narrative": patient.get("clinical_narrative", ""),
             "retrieved_context": None,
             "proposed_medication": None,
             "reasoning": None,

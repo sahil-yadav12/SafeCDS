@@ -4,6 +4,13 @@ import json
 from typing import TypedDict, List, Optional, Dict, Any, Callable, Tuple
 from src.agents.llm_client import LLMClinicalAgent
 from src.retrieval.hybrid_retriever import HybridClinicalRetriever
+from src.reasoning.clinical_rules import (
+    classify_ckd,
+    classify_albuminuria,
+    evaluate_potassium,
+    evaluate_cardiorenal,
+    evaluate_medication_eligibility
+)
 
 # Import LangGraph if available, otherwise provide an exact lightweight state machine
 try:
@@ -104,6 +111,14 @@ class AgentState(TypedDict):
     model_name: Optional[str]
     api_key: Optional[str]
     
+    # Clinical Rules & Laboratory Validation
+    ckd_stage: Optional[str]
+    albuminuria_stage: Optional[str]
+    potassium_status: Optional[str]
+    cardiorenal_status: Optional[dict]
+    medication_eligibility: Optional[dict]
+    clinical_alerts: Optional[List[str]]
+    
     # Output payload
     final_output: dict
 
@@ -141,14 +156,54 @@ def log_step(state: AgentState, stage: str, message: str, meta: Optional[dict] =
 
 
 def ingest_node(state: AgentState):
-    """Initializes and normalizes patient intake profile."""
+    """Initializes and normalizes patient intake profile and executes deterministic validation."""
     pid = state.get("patient_id", "Patient_Unknown")
     conds = state.get("conditions", [])
+    labs = state.get("lab_values") or {}
+    
+    egfr = labs.get("egfr")
+    uacr = labs.get("uacr")
+    k_val = labs.get("potassium")
+    hba1c = labs.get("hba1c")
+    sbp = labs.get("sbp")
+    age = state.get("age") or labs.get("age", 65)
+    symptoms = state.get("symptoms") or labs.get("symptoms", [])
+    narrative = state.get("clinical_narrative") or labs.get("clinical_narrative", "")
+    
+    has_ckd = "ckd" in " ".join(conds).lower() or (egfr is not None and egfr < 60)
+    has_dm = "diabetes" in " ".join(conds).lower() or "t2d" in " ".join(conds).lower() or (hba1c is not None and hba1c >= 6.5)
+    has_htn = "hypertension" in " ".join(conds).lower() or "htn" in " ".join(conds).lower() or (sbp is not None and sbp >= 130)
+    has_hf = "heart_failure" in " ".join(conds).lower() or "hf" in " ".join(conds).lower()
+    
+    ckd_eval = classify_ckd(egfr, has_kidney_damage=True if (uacr and uacr >= 30) or has_ckd else False)
+    alb_eval = classify_albuminuria(uacr)
+    k_eval = evaluate_potassium(k_val)
+    cr_eval = evaluate_cardiorenal(has_hf, symptoms=symptoms, clinical_narrative=narrative, egfr=egfr)
+    med_elig = evaluate_medication_eligibility(
+        egfr=egfr, uacr=uacr, k_val=k_val, hba1c=hba1c,
+        has_hf=cr_eval["heart_failure_present"], has_dm=has_dm, has_htn=has_htn, age=age
+    )
+    
+    alerts = []
+    if k_eval["is_alert"]:
+        alerts.append(k_eval["message"])
+    if cr_eval["fluid_overload_present"]:
+        alerts.append("Fluid Overload Alert: Dependent peripheral or pulmonary congestion detected. Loop diuretic indicated.")
+    if cr_eval["cardiorenal_syndrome"]:
+        alerts.append(f"Cardiorenal Syndrome Alert: {cr_eval['crs_type']} present.")
+        
+    state["ckd_stage"] = ckd_eval["stage_code"]
+    state["albuminuria_stage"] = alb_eval["stage_code"]
+    state["potassium_status"] = k_eval["status"]
+    state["cardiorenal_status"] = cr_eval
+    state["medication_eligibility"] = med_elig
+    state["clinical_alerts"] = alerts
+    
     log_step(
         state,
         "INGESTION",
-        f"Patient {pid} presentation ingested with documented conditions: {', '.join(conds) if conds else 'None'}",
-        {"patient_id": pid, "conditions": conds}
+        f"Patient {pid} presentation ingested. KDIGO CKD: {ckd_eval['stage_code']} ({ckd_eval['icd10']}), Albuminuria: {alb_eval['stage_code']}, K+: {k_eval['status']}",
+        {"patient_id": pid, "ckd_stage": ckd_eval["stage_code"], "icd10": ckd_eval["icd10"], "alerts": alerts}
     )
     return state
 
@@ -205,6 +260,16 @@ def generate_hypothesis_node(state: AgentState, llm_agent: LLMClinicalAgent):
     state["differential_diagnoses"] = response.get("differential_diagnoses", [])
     state["patient_friendly_summary"] = response.get("patient_friendly_summary", "")
     state["warnings"] = response.get("warnings", [])
+    if response.get("clinical_alerts"):
+        cur_alerts = state.get("clinical_alerts") or []
+        for alert in response["clinical_alerts"]:
+            if alert not in cur_alerts:
+                cur_alerts.append(alert)
+        state["clinical_alerts"] = cur_alerts
+    if response.get("ckd_stage"):
+        state["ckd_stage"] = response["ckd_stage"]
+    if response.get("albuminuria_stage"):
+        state["albuminuria_stage"] = response["albuminuria_stage"]
     
     log_step(
         state,
@@ -223,7 +288,8 @@ def verify_node(state: AgentState, verifier):
     result = verifier.verify_prescription(
         patient_id=patient_id,
         conditions=conditions,
-        medications=[medication]
+        medications=[medication],
+        lab_values=state.get("lab_values")
     )
     
     state["verification_details"] = result
@@ -281,6 +347,12 @@ def finalize_node(state: AgentState):
         "clinical_rationale": state.get("reasoning"),
         "patient_friendly_summary": state.get("patient_friendly_summary"),
         "warnings": state.get("warnings", []),
+        "clinical_alerts": state.get("clinical_alerts", []),
+        "ckd_stage": state.get("ckd_stage"),
+        "albuminuria_stage": state.get("albuminuria_stage"),
+        "potassium_status": state.get("potassium_status"),
+        "cardiorenal_status": state.get("cardiorenal_status"),
+        "medication_eligibility": state.get("medication_eligibility"),
         "retrieved_passages": state.get("retrieved_passages", []),
         "evidence_context": state.get("retrieved_context"),
         "verification_details": state.get("verification_details"),
@@ -311,6 +383,12 @@ def escalate_node(state: AgentState):
         "reason": "Maximum retry limit reached without resolving formal clinical violations. Fail-closed safety gate engaged.",
         "retrieved_passages": state.get("retrieved_passages", []),
         "verification_details": state.get("verification_details"),
+        "clinical_alerts": state.get("clinical_alerts", []),
+        "ckd_stage": state.get("ckd_stage"),
+        "albuminuria_stage": state.get("albuminuria_stage"),
+        "potassium_status": state.get("potassium_status"),
+        "cardiorenal_status": state.get("cardiorenal_status"),
+        "medication_eligibility": state.get("medication_eligibility"),
         "total_attempts": state.get("retries", 0),
         "audit_trail": state.get("violations", []),
         "chronological_trace": state.get("chronological_trace", []),

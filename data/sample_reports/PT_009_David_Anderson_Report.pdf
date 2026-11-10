@@ -1,0 +1,49 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>
+endobj
+4 0 obj
+<< /Length 1732 >>
+stream
+BT /F1 14 Tf 50 750 Td (UNIVERSITY CARDIOLOGY & RENAL CENTER - CLINICAL REPORT) Tj ET
+BT /F1 10 Tf 50 720 Td (Patient ID: PT_009) Tj ET
+BT /F1 10 Tf 50 702 Td (Patient Name: David Anderson | Age: 69 | Gender: Male | Date: 2026-10-28) Tj ET
+BT /F1 10 Tf 50 684 Td (--------------------------------------------------------------------------------) Tj ET
+BT /F1 10 Tf 50 666 Td (CLINICAL PRESENTATION & SYMPTOMS:) Tj ET
+BT /F1 10 Tf 50 648 Td (69-year-old male with Heart Failure and Type 2 Diabetes presenting with active) Tj ET
+BT /F1 10 Tf 50 630 Td (fluid overload: bilateral pedal edema, breathlessness on exertion, and orthopnea.) Tj ET
+BT /F1 10 Tf 50 612 Td (--------------------------------------------------------------------------------) Tj ET
+BT /F1 10 Tf 50 594 Td (LABORATORY & HEMODYNAMIC FINDINGS:) Tj ET
+BT /F1 10 Tf 50 576 Td (  * Estimated GFR \(eGFR\): 24.0 mL/min/1.73m2 \(KDIGO Stage 4 - Severely Decreased\)) Tj ET
+BT /F1 10 Tf 50 558 Td (  * Serum Potassium \(K+\): 5.3 mmol/L \(CRITICAL MILD HYPERKALEMIA ALERT\)) Tj ET
+BT /F1 10 Tf 50 540 Td (  * Glycated Hemoglobin \(HbA1c\): 7.4 %) Tj ET
+BT /F1 10 Tf 50 522 Td (  * Serum Creatinine: 2.7 mg/dL) Tj ET
+BT /F1 10 Tf 50 504 Td (  * Blood Pressure \(BP\): 154/92 mmHg \(Stage 2 Hypertension\)) Tj ET
+BT /F1 10 Tf 50 486 Td (  * Urine Albumin-to-Creatinine Ratio \(UACR\): 780 mg/g \(Stage A3 Macroalbuminuria\)) Tj ET
+BT /F1 10 Tf 50 468 Td (--------------------------------------------------------------------------------) Tj ET
+BT /F1 10 Tf 50 450 Td (ASSESSMENT: Cardiorenal Syndrome Type 2/4 with CKD Stage 4 \(ICD-10: N18.4\).) Tj ET
+BT /F1 10 Tf 50 432 Td (SAFETY ACTIONS: Metformin contraindicated \(eGFR < 30\); SGLT2i + Loop diuretic indicated.) Tj ET
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000241 00000 n 
+0000002025 00000 n 
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+2095
+%%EOF

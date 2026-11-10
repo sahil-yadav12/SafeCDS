@@ -28,13 +28,21 @@ class ClinicalVerifier:
     
     # Pre-defined known entity catalogs with synonym/alias mapping
     CANONICAL_CONDITIONS = {
+        "ckd_stage_1": "CKD_Stage_1",
+        "ckd_stage_2": "CKD_Stage_2",
+        "ckd_stage_3a": "CKD_Stage_3a",
+        "ckd_stage_3b": "CKD_Stage_3b",
+        "ckd_stage_4": "CKD_Stage_4",
+        "ckd_stage_5": "CKD_Stage_5",
         "ckd_stage_4_5": "CKD_Stage_4_5",
-        "ckd_stage_4": "CKD_Stage_4_5",
-        "ckd_stage_5": "CKD_Stage_4_5",
-        "ckd4": "CKD_Stage_4_5",
-        "ckd5": "CKD_Stage_4_5",
-        "esrd": "CKD_Stage_4_5",
-        "chronic_kidney_disease": "CKD_Stage_4_5",
+        "ckd1": "CKD_Stage_1",
+        "ckd2": "CKD_Stage_2",
+        "ckd3a": "CKD_Stage_3a",
+        "ckd3b": "CKD_Stage_3b",
+        "ckd4": "CKD_Stage_4",
+        "ckd5": "CKD_Stage_5",
+        "esrd": "CKD_Stage_5",
+        "hyperkalemia": "Hyperkalemia",
         "type_2_diabetes": "Type_2_Diabetes",
         "type_ii_diabetes": "Type_2_Diabetes",
         "t2d": "Type_2_Diabetes",
@@ -50,7 +58,9 @@ class ClinicalVerifier:
         "high_blood_pressure": "Hypertension",
         "htn": "Hypertension",
         "heart_failure": "Heart_Failure",
-        "hf": "Heart_Failure"
+        "hf": "Heart_Failure",
+        "cardiorenal_syndrome": "Cardiorenal_Syndrome",
+        "cardiorenal": "Cardiorenal_Syndrome"
     }
 
     CANONICAL_MEDICATIONS = {
@@ -60,9 +70,19 @@ class ClinicalVerifier:
         "amlodipine": "Amlodipine",
         "losartan": "Losartan",
         "sulfonylurea": "Sulfonylurea",
-        "sglt2_inhibitor": "SGLT2_Inhibitor",
         "glipizide": "Sulfonylurea",
+        "sglt2_inhibitor": "SGLT2_Inhibitor",
         "empagliflozin": "SGLT2_Inhibitor",
+        "dapagliflozin": "SGLT2_Inhibitor",
+        "canagliflozin": "SGLT2_Inhibitor",
+        "glp1_ra": "GLP1_RA",
+        "semaglutide": "GLP1_RA",
+        "dulaglutide": "GLP1_RA",
+        "liraglutide": "GLP1_RA",
+        "loop_diuretic": "Loop_Diuretic",
+        "furosemide": "Loop_Diuretic",
+        "torsemide": "Loop_Diuretic",
+        "bumetanide": "Loop_Diuretic",
         "pediatric_insulin": "Insulin"
     }
 
@@ -80,11 +100,13 @@ class ClinicalVerifier:
         self.axioms: List[Dict[str, str]] = []
         self.known_meds: List[str] = [
             "Metformin", "Lisinopril", "Insulin", "Amlodipine", "Losartan",
-            "Sulfonylurea", "SGLT2_Inhibitor"
+            "Sulfonylurea", "SGLT2_Inhibitor", "GLP1_RA", "Loop_Diuretic"
         ]
         self.known_conds: List[str] = [
-            "CKD_Stage_4_5", "Type_2_Diabetes", "Hypertension", "Heart_Failure",
-            "PediatricNephropathy", "Type_1_Diabetes"
+            "CKD_Stage_1", "CKD_Stage_2", "CKD_Stage_3a", "CKD_Stage_3b",
+            "CKD_Stage_4", "CKD_Stage_5", "CKD_Stage_4_5",
+            "Hyperkalemia", "Heart_Failure", "Cardiorenal_Syndrome",
+            "Type_2_Diabetes", "Hypertension", "PediatricNephropathy", "Type_1_Diabetes"
         ]
         self._load_and_parse_ontology()
 
@@ -147,16 +169,40 @@ class ClinicalVerifier:
         """Default cardiometabolic safety axioms derived from KDIGO/ADA standards."""
         self.axioms = [
             {
+                "class_name": "UnsafeMetforminStage4",
+                "condition": "CKD_Stage_4",
+                "medication": "Metformin",
+                "description": "Contraindication: Metformin is contraindicated in CKD Stage 4 (eGFR < 30 mL/min/1.73m²) due to high risk of fatal lactic acidosis."
+            },
+            {
+                "class_name": "UnsafeMetforminStage5",
+                "condition": "CKD_Stage_5",
+                "medication": "Metformin",
+                "description": "Contraindication: Metformin is contraindicated in CKD Stage 5 (eGFR < 15 mL/min/1.73m²) due to high risk of fatal lactic acidosis."
+            },
+            {
                 "class_name": "UnsafeMetforminPrescription",
                 "condition": "CKD_Stage_4_5",
                 "medication": "Metformin",
                 "description": "Contraindication: Metformin is contraindicated in CKD_Stage_4_5 (Risk of Lactic Acidosis)."
             },
             {
+                "class_name": "UnsafeACEiHyperkalemia",
+                "condition": "Hyperkalemia",
+                "medication": "Lisinopril",
+                "description": "Contraindication: High-dose ACE-inhibitors (Lisinopril) are contraindicated in active hyperkalemia (K+ > 5.0 mmol/L) due to fatal cardiac arrhythmia risk."
+            },
+            {
                 "class_name": "UnsafeACEiPrescription",
                 "condition": "CKD_Stage_4_5",
                 "medication": "Lisinopril",
                 "description": "Contraindication: High-dose ACE-inhibitors (Lisinopril) are contraindicated in advanced CKD_Stage_4_5 without close monitoring (Risk of severe hyperkalemia / acute renal decline)."
+            },
+            {
+                "class_name": "UnsafePediatricOralHypoglycemicPrescription",
+                "condition": "PediatricNephropathy",
+                "medication": "Metformin",
+                "description": "Contraindication: Adult oral hypoglycemic agents are strictly contraindicated in pediatric diabetic nephropathy; intensive basal-bolus insulin is mandated (ISPAD 2024 / KDIGO Pediatric)."
             }
         ]
 
@@ -203,6 +249,12 @@ class ClinicalVerifier:
             if axiom["condition"] in matched_conditions and axiom["medication"] in matched_medications:
                 if axiom["class_name"] == "UnsafeMetforminPrescription":
                     violations.append("Contraindication: Metformin is contraindicated in CKD_Stage_4_5 (Risk of Lactic Acidosis).")
+                elif axiom["class_name"] == "UnsafeMetforminStage4":
+                    violations.append("Contraindication: Metformin is contraindicated in CKD Stage 4 (eGFR < 30 mL/min/1.73m²) due to high risk of fatal lactic acidosis.")
+                elif axiom["class_name"] == "UnsafeMetforminStage5":
+                    violations.append("Contraindication: Metformin is contraindicated in CKD Stage 5 (eGFR < 15 mL/min/1.73m²) due to fatal lactic acidosis risk.")
+                elif axiom["class_name"] == "UnsafeACEiHyperkalemia":
+                    violations.append("Contraindication: High-dose ACE-inhibitors (Lisinopril) are contraindicated in active hyperkalemia (K+ > 5.0 mmol/L) due to fatal cardiac arrhythmia risk.")
                 elif axiom["class_name"] == "UnsafeACEiPrescription":
                     violations.append("Contraindication: High-dose ACE-inhibitors (Lisinopril) are contraindicated in advanced CKD_Stage_4_5 without close monitoring (Risk of severe hyperkalemia / acute renal decline).")
                 elif axiom["class_name"] == "UnsafePediatricOralHypoglycemicPrescription":
@@ -242,6 +294,18 @@ class ClinicalVerifier:
             if unsafe_metformin and patient in unsafe_metformin.instances():
                 violations.append("Contraindication: Metformin is contraindicated in CKD_Stage_4_5 (Risk of Lactic Acidosis).")
 
+            unsafe_m4 = getattr(onto, "UnsafeMetforminStage4", None)
+            if unsafe_m4 and patient in unsafe_m4.instances():
+                violations.append("Contraindication: Metformin is contraindicated in CKD Stage 4 (eGFR < 30 mL/min/1.73m²) due to high risk of fatal lactic acidosis.")
+
+            unsafe_m5 = getattr(onto, "UnsafeMetforminStage5", None)
+            if unsafe_m5 and patient in unsafe_m5.instances():
+                violations.append("Contraindication: Metformin is contraindicated in CKD Stage 5 (eGFR < 15 mL/min/1.73m²) due to fatal lactic acidosis risk.")
+
+            unsafe_hyperk = getattr(onto, "UnsafeACEiHyperkalemia", None)
+            if unsafe_hyperk and patient in unsafe_hyperk.instances():
+                violations.append("Contraindication: High-dose ACE-inhibitors (Lisinopril) are contraindicated in active hyperkalemia (K+ > 5.0 mmol/L) due to fatal cardiac arrhythmia risk.")
+
             unsafe_acei = getattr(onto, "UnsafeACEiPrescription", None)
             if unsafe_acei and patient in unsafe_acei.instances():
                 violations.append("Contraindication: High-dose ACE-inhibitors (Lisinopril) are contraindicated in advanced CKD_Stage_4_5 without close monitoring (Risk of severe hyperkalemia / acute renal decline).")
@@ -253,7 +317,13 @@ class ClinicalVerifier:
             except Exception:
                 pass
 
-    def verify_prescription(self, patient_id: str, conditions: List[str], medications: List[str]) -> dict:
+    def verify_prescription(
+        self,
+        patient_id: str,
+        conditions: List[str],
+        medications: List[str],
+        lab_values: Optional[dict] = None
+    ) -> dict:
         """
         Verifies patient conditions and medications against clinical ontologies.
         
@@ -275,6 +345,38 @@ class ClinicalVerifier:
         for c in conditions:
             m = self._match_ontology_entity(c, self.known_conds)
             matched_c_set.add(m if m else c)
+
+        # Integrate lab values deterministically into ontological facts
+        if lab_values:
+            egfr_val = lab_values.get("egfr")
+            if egfr_val is not None:
+                try:
+                    egfr_float = float(egfr_val)
+                    if egfr_float < 15.0:
+                        matched_c_set.add("CKD_Stage_5")
+                        matched_c_set.add("CKD_Stage_4_5")
+                    elif egfr_float < 30.0:
+                        matched_c_set.add("CKD_Stage_4")
+                        matched_c_set.add("CKD_Stage_4_5")
+                    elif egfr_float < 45.0:
+                        matched_c_set.add("CKD_Stage_3b")
+                    elif egfr_float < 60.0:
+                        matched_c_set.add("CKD_Stage_3a")
+                except (ValueError, TypeError):
+                    pass
+
+            k_val = lab_values.get("potassium")
+            if k_val is not None:
+                try:
+                    k_float = float(k_val)
+                    if k_float > 5.0:
+                        matched_c_set.add("Hyperkalemia")
+                except (ValueError, TypeError):
+                    pass
+
+        # Ensure CKD Stage 4 or 5 also entails CKD_Stage_4_5 for backwards-compatible axioms
+        if "CKD_Stage_4" in matched_c_set or "CKD_Stage_5" in matched_c_set:
+            matched_c_set.add("CKD_Stage_4_5")
 
         matched_m_set = set()
         for med in medications:

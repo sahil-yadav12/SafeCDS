@@ -132,6 +132,56 @@ def main():
         ]
     )
 
+    # 4. PT_008 Report (Sarah Johnson - CKD 3b + T2D + UACR 420)
+    create_simple_pdf(
+        os.path.join(target_dir, "PT_008_Sarah_Johnson_Report.pdf"),
+        "METABOLIC & NEPHROLOGY CLINIC - ROUTINE CKD EVALUATION",
+        [
+            "Patient ID: PT_008",
+            "Patient Name: Sarah Johnson | Age: 62 | Gender: Female | Date: 2026-10-25",
+            "--------------------------------------------------------------------------------",
+            "CLINICAL PRESENTATION & SYMPTOMS:",
+            "62-year-old female with longstanding Type 2 Diabetes and Hypertension presenting",
+            "for routine review. Reports mild bilateral ankle edema, fatigue, and nocturia.",
+            "--------------------------------------------------------------------------------",
+            "LABORATORY BIOMARKERS:",
+            "  * Estimated GFR (eGFR): 38.0 mL/min/1.73m2 (KDIGO Stage 3b - Moderate to Severe)",
+            "  * Glycated Hemoglobin (HbA1c): 8.1 %",
+            "  * Serum Creatinine: 1.6 mg/dL",
+            "  * Blood Pressure (BP): 146/88 mmHg",
+            "  * Serum Potassium (K+): 4.4 mmol/L (Normokalemia)",
+            "  * Urine Albumin-to-Creatinine Ratio (UACR): 420 mg/g (Stage A3 Severely Increased)",
+            "--------------------------------------------------------------------------------",
+            "DIAGNOSTIC CODING: Chronic Kidney Disease Stage 3b (ICD-10: N18.32).",
+            "GUIDELINE NOTE: Metformin is safe with dose reduction (max 1000mg/day); SGLT2i indicated."
+        ]
+    )
+
+    # 5. PT_009 Report (David Anderson - CKD 4 + Heart Failure + Hyperkalemia K+ 5.3)
+    create_simple_pdf(
+        os.path.join(target_dir, "PT_009_David_Anderson_Report.pdf"),
+        "UNIVERSITY CARDIOLOGY & RENAL CENTER - CLINICAL REPORT",
+        [
+            "Patient ID: PT_009",
+            "Patient Name: David Anderson | Age: 69 | Gender: Male | Date: 2026-10-28",
+            "--------------------------------------------------------------------------------",
+            "CLINICAL PRESENTATION & SYMPTOMS:",
+            "69-year-old male with Heart Failure and Type 2 Diabetes presenting with active",
+            "fluid overload: bilateral pedal edema, breathlessness on exertion, and orthopnea.",
+            "--------------------------------------------------------------------------------",
+            "LABORATORY & HEMODYNAMIC FINDINGS:",
+            "  * Estimated GFR (eGFR): 24.0 mL/min/1.73m2 (KDIGO Stage 4 - Severely Decreased)",
+            "  * Serum Potassium (K+): 5.3 mmol/L (CRITICAL MILD HYPERKALEMIA ALERT)",
+            "  * Glycated Hemoglobin (HbA1c): 7.4 %",
+            "  * Serum Creatinine: 2.7 mg/dL",
+            "  * Blood Pressure (BP): 154/92 mmHg (Stage 2 Hypertension)",
+            "  * Urine Albumin-to-Creatinine Ratio (UACR): 780 mg/g (Stage A3 Macroalbuminuria)",
+            "--------------------------------------------------------------------------------",
+            "ASSESSMENT: Cardiorenal Syndrome Type 2/4 with CKD Stage 4 (ICD-10: N18.4).",
+            "SAFETY ACTIONS: Metformin contraindicated (eGFR < 30); SGLT2i + Loop diuretic indicated."
+        ]
+    )
+
     print(f"Sample medical PDF reports generated in {target_dir}")
 
 if __name__ == "__main__":

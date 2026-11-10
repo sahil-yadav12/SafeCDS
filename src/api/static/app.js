@@ -95,12 +95,16 @@ document.addEventListener("DOMContentLoaded", () => {
             btnViewClinician.classList.remove("active");
             viewClinician.classList.add("hidden");
             viewPatient.classList.remove("hidden");
+            viewClinician.style.display = "none";
+            viewPatient.style.display = "block";
             if (chatInput) chatInput.focus();
         } else {
             btnViewClinician.classList.add("active");
             btnViewPatient.classList.remove("active");
             viewPatient.classList.add("hidden");
             viewClinician.classList.remove("hidden");
+            viewPatient.style.display = "none";
+            viewClinician.style.display = "block";
         }
     }
 
@@ -250,6 +254,13 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("input-dbp").value = patient.dbp;
         document.getElementById("input-hba1c").value = patient.hba1c;
         document.getElementById("input-creatinine").value = patient.creatinine;
+
+        const potEl = document.getElementById("input-potassium");
+        if (potEl) potEl.value = (patient.potassium !== undefined && patient.potassium !== null) ? patient.potassium : 4.5;
+
+        const uacrEl = document.getElementById("input-uacr");
+        if (uacrEl) uacrEl.value = (patient.uacr !== undefined && patient.uacr !== null) ? patient.uacr : 30;
+
         document.getElementById("clinical-narrative").value = patient.clinical_narrative;
 
         // Check matching condition boxes
@@ -336,6 +347,14 @@ document.addEventListener("DOMContentLoaded", () => {
         if (parsed.dbp) document.getElementById("input-dbp").value = parsed.dbp;
         if (parsed.hba1c) document.getElementById("input-hba1c").value = parsed.hba1c;
         if (parsed.creatinine) document.getElementById("input-creatinine").value = parsed.creatinine;
+        if (parsed.potassium !== null && parsed.potassium !== undefined) {
+            const potEl = document.getElementById("input-potassium");
+            if (potEl) potEl.value = parsed.potassium;
+        }
+        if (parsed.uacr !== null && parsed.uacr !== undefined) {
+            const uacrEl = document.getElementById("input-uacr");
+            if (uacrEl) uacrEl.value = parsed.uacr;
+        }
 
         if (parsed.conditions && parsed.conditions.length > 0) {
             document.querySelectorAll(".condition-checkbox").forEach(cb => {
@@ -364,6 +383,9 @@ document.addEventListener("DOMContentLoaded", () => {
             const provider = providerSelect.value;
             const apiKey = provider === "gemini" ? apiKeys.gemini : (provider === "openai" ? apiKeys.openai : "");
 
+            const potInput = document.getElementById("input-potassium");
+            const uacrInput = document.getElementById("input-uacr");
+
             const payload = {
                 patient_id: document.getElementById("patient-id").value.trim(),
                 patient_name: document.getElementById("patient-name").value.trim(),
@@ -375,7 +397,9 @@ document.addEventListener("DOMContentLoaded", () => {
                     sbp: parseInt(document.getElementById("input-sbp").value) || 120,
                     dbp: parseInt(document.getElementById("input-dbp").value) || 80,
                     hba1c: parseFloat(document.getElementById("input-hba1c").value) || 5.7,
-                    creatinine: parseFloat(document.getElementById("input-creatinine").value) || 1.0
+                    creatinine: parseFloat(document.getElementById("input-creatinine").value) || 1.0,
+                    potassium: potInput ? parseFloat(potInput.value) : 4.5,
+                    uacr: uacrInput ? parseFloat(uacrInput.value) : 30.0
                 },
                 clinical_narrative: document.getElementById("clinical-narrative").value.trim(),
                 provider: provider,
@@ -433,12 +457,66 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("res-diagnosed-condition").textContent = res.diagnosed_condition || "Cardiometabolic Multimorbidity";
         document.getElementById("res-icd10").textContent = `ICD-10: ${res.icd10_code || 'R69'}`;
 
-        // Biomarkers Strip
         const labs = intakePayload?.lab_values || {};
+
+        // Staging Badges
+        const ckdBadge = document.getElementById("res-ckd-badge");
+        if (ckdBadge) {
+            ckdBadge.textContent = `KDIGO: ${res.ckd_stage ? 'Stage ' + res.ckd_stage.replace('G','') + ' (' + res.ckd_stage + ')' : 'Stage 4 (G4)'}`;
+        }
+        const albBadge = document.getElementById("res-alb-badge");
+        if (albBadge) {
+            const albStage = res.albuminuria_stage || (labs.uacr > 300 ? 'A3' : (labs.uacr >= 30 ? 'A2' : 'A1'));
+            albBadge.textContent = `Albuminuria: ${albStage} (${labs.uacr || 30} mg/g)`;
+        }
+        const kBadge = document.getElementById("res-k-badge");
+        if (kBadge) {
+            const kVal = labs.potassium !== undefined ? labs.potassium : 4.5;
+            if (kVal > 5.0) {
+                kBadge.className = "badge-status badge-contraindicated text-[11px]";
+                kBadge.textContent = `K+: Elevated (${kVal} mmol/L)`;
+            } else {
+                kBadge.className = "badge-status badge-verified text-[11px]";
+                kBadge.textContent = `K+: Normal (${kVal} mmol/L)`;
+            }
+        }
+
+        // Biomarkers Strip
         document.getElementById("strip-egfr").textContent = `${labs.egfr || 22.0} mL/min`;
         document.getElementById("strip-bp").textContent = `${labs.sbp || 138}/${labs.dbp || 84} mmHg`;
         document.getElementById("strip-hba1c").textContent = `${labs.hba1c || 9.2}%`;
         document.getElementById("strip-creatinine").textContent = `${labs.creatinine || 3.1} mg/dL`;
+        const stripK = document.getElementById("strip-potassium");
+        if (stripK) stripK.textContent = `${labs.potassium || 4.5} mmol/L`;
+        const stripUacr = document.getElementById("strip-uacr");
+        if (stripUacr) stripUacr.textContent = `${labs.uacr || 30} mg/g`;
+
+        // Clinical Safety Alerts Panel
+        const alertsContainer = document.getElementById("res-clinical-alerts-container");
+        if (alertsContainer) {
+            alertsContainer.innerHTML = "";
+            const alerts = res.clinical_alerts || [];
+            if (alerts.length > 0) {
+                alertsContainer.classList.remove("hidden");
+                alertsContainer.style.display = "block";
+                alerts.forEach(alertText => {
+                    const alertDiv = document.createElement("div");
+                    const isCritical = alertText.toLowerCase().includes("hyperkalemia") || alertText.toLowerCase().includes("emergency");
+                    alertDiv.className = `p-3 rounded-[12px] border text-xs flex items-start space-x-2.5 ${isCritical ? 'bg-[var(--status-contraindicated-bg)] border-[var(--status-contraindicated-border)] text-[var(--status-contraindicated-text)]' : 'bg-[var(--status-warning-bg)] border-[var(--status-warning-border)] text-[var(--status-warning-text)]'}`;
+                    alertDiv.innerHTML = `
+                        <span class="font-bold text-sm">⚠️</span>
+                        <div class="leading-relaxed">
+                            <span class="font-semibold uppercase text-[11px] block tracking-wide">${isCritical ? 'CRITICAL SAFETY ALERT' : 'CLINICAL ALERT'}</span>
+                            ${alertText}
+                        </div>
+                    `;
+                    alertsContainer.appendChild(alertDiv);
+                });
+            } else {
+                alertsContainer.classList.add("hidden");
+                alertsContainer.style.display = "none";
+            }
+        }
 
         // Approved Treatment & Clinical Rationale
         document.getElementById("res-recommended-treatment").textContent = res.recommended_treatment || res.last_proposed_treatment || "Withheld for Safety";

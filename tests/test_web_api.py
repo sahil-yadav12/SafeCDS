@@ -108,7 +108,7 @@ def test_patient_chat_endpoint():
     assert data["status"] == "success"
     assert "reply" in data
     assert "Insulin" in data["reply"] or "Metformin avoided" in data["reply"]
-    assert "CKD_Stage_4_5" in data["detected_conditions"]
+    assert "CKD_Stage_4" in data["detected_conditions"] or "CKD_Stage_4_5" in data["detected_conditions"]
 
 def test_evaluate_pediatric_patient_pt007():
     payload = {
@@ -134,4 +134,72 @@ def test_evaluate_pediatric_patient_pt007():
     assert "Insulin" in res["recommended_treatment"]
     assert res["icd10_code"] == "E10.21"
     assert res["verification_details"]["status"] == "PASS"
+
+def test_evaluate_patient_pt008_sarah_johnson():
+    payload = {
+        "patient_id": "PT_008",
+        "patient_name": "Sarah Johnson",
+        "age": 62,
+        "gender": "Female",
+        "conditions": ["CKD_Stage_3b", "Type_2_Diabetes", "Hypertension"],
+        "lab_values": {
+            "egfr": 38.0,
+            "uacr": 420.0,
+            "hba1c": 8.1,
+            "sbp": 146,
+            "dbp": 88,
+            "creatinine": 1.6,
+            "potassium": 4.4
+        },
+        "clinical_narrative": "62yo female with CKD Stage 3b, Type 2 Diabetes, and Hypertension.",
+        "provider": "local"
+    }
+    response = client.post("/api/evaluate", json=payload)
+    assert response.status_code == 200
+    res = response.json()["result"]
+    assert res["status"] == "APPROVED"
+    # Deterministic KDIGO Stage 3b (G3b) and ICD-10 N18.32
+    assert res["icd10_code"] == "N18.32"
+    assert "Stage 3b" in res["diagnosed_condition"] or "G3b" in res["diagnosed_condition"]
+    # Metformin is NOT contraindicated at eGFR 38; dose reduction mandated
+    assert "Metformin" in res["recommended_treatment"]
+    assert "1000mg" in res["recommended_treatment"] or "dose-reduced" in res["recommended_treatment"].lower()
+    # Insulin must not be knee-jerk recommended
+    assert "Insulin" not in res["recommended_treatment"]
+    # SGLT2i renoprotection mentioned in rationale
+    assert "SGLT2" in res["clinical_rationale"] or "SGLT2" in " ".join(res["warnings"])
+
+def test_evaluate_patient_pt009_david_anderson():
+    payload = {
+        "patient_id": "PT_009",
+        "patient_name": "David Anderson",
+        "age": 69,
+        "gender": "Male",
+        "conditions": ["CKD_Stage_4", "Type_2_Diabetes", "Hypertension", "Heart_Failure", "Hyperkalemia"],
+        "lab_values": {
+            "egfr": 24.0,
+            "uacr": 780.0,
+            "hba1c": 7.4,
+            "sbp": 154,
+            "dbp": 92,
+            "creatinine": 2.7,
+            "potassium": 5.3
+        },
+        "symptoms": ["Bilateral pedal edema", "Breathlessness on exertion", "Reduced exercise tolerance"],
+        "clinical_narrative": "69yo male with Heart Failure, CKD Stage 4, pedal edema, dyspnea, and K+ 5.3 mmol/L.",
+        "provider": "local"
+    }
+    response = client.post("/api/evaluate", json=payload)
+    assert response.status_code == 200
+    res = response.json()["result"]
+    assert res["status"] == "APPROVED"
+    # Deterministic Stage 4 (G4) and ICD-10 N18.4
+    assert res["icd10_code"] == "N18.4"
+    # Critical Hyperkalemia Alert raised
+    assert any("Hyperkalemia" in a or "5.3" in a for a in res.get("clinical_alerts", [])) or any("5.3" in w for w in res.get("warnings", []))
+    # SGLT2 inhibitor recommended for HF and cardiorenal protection
+    assert "SGLT2" in res["recommended_treatment"] or "Empagliflozin" in res["recommended_treatment"]
+    # Metformin strictly contraindicated at eGFR 24
+    assert any("Metformin" in w for w in res["warnings"])
+
 

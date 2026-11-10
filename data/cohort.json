@@ -152,5 +152,63 @@
     ],
     "clinical_narrative": "14-year-old adolescent male with early-onset Type 1 Diabetes presenting with persistent microalbuminuria and declining renal function (bedside Schwartz eGFR 42 mL/min/1.73m2). Uncontrolled HbA1c 9.4%. Requires pediatric basal-bolus insulin optimization; all unapproved adult oral agents contraindicated.",
     "expected_drug": "Pediatric Basal-Bolus Insulin Regimen"
+  },
+  {
+    "patient_id": "PT_008",
+    "name": "Sarah Johnson",
+    "age": 62,
+    "gender": "Female",
+    "conditions": [
+      "CKD_Stage_3b",
+      "Type_2_Diabetes",
+      "Hypertension"
+    ],
+    "egfr": 38.0,
+    "sbp": 146,
+    "dbp": 88,
+    "hba1c": 8.1,
+    "creatinine": 1.6,
+    "potassium": 4.4,
+    "uacr": 420.0,
+    "sodium": 139.0,
+    "bicarbonate": 23.0,
+    "symptoms": [
+      "Mild bilateral ankle edema",
+      "Fatigue",
+      "Nocturia"
+    ],
+    "clinical_narrative": "62-year-old female with longstanding Type 2 Diabetes and Hypertension presenting for routine review. Labs reveal eGFR 38 mL/min/1.73m2 (KDIGO Stage 3b / ICD-10 N18.32), UACR 420 mg/g (Albuminuria Stage A3), HbA1c 8.1%, and BP 146/88 mmHg. Normokalemic (K+ 4.4 mmol/L). Metformin should be maintained with dose reduction (max 1000mg/day); SGLT2 inhibitor indicated for renoprotection.",
+    "expected_drug": "Metformin (dose-reduced) / SGLT2 Inhibitor"
+  },
+  {
+    "patient_id": "PT_009",
+    "name": "David Anderson",
+    "age": 69,
+    "gender": "Male",
+    "conditions": [
+      "CKD_Stage_4",
+      "Type_2_Diabetes",
+      "Hypertension",
+      "Heart_Failure",
+      "Hyperkalemia",
+      "Cardiorenal_Syndrome"
+    ],
+    "egfr": 24.0,
+    "sbp": 154,
+    "dbp": 92,
+    "hba1c": 7.4,
+    "creatinine": 2.7,
+    "potassium": 5.3,
+    "uacr": 780.0,
+    "sodium": 136.0,
+    "bicarbonate": 20.0,
+    "symptoms": [
+      "Bilateral pedal edema",
+      "Breathlessness on exertion",
+      "Reduced exercise tolerance",
+      "Orthopnea"
+    ],
+    "clinical_narrative": "69-year-old male with Heart Failure, Type 2 Diabetes, and advanced CKD Stage 4 (eGFR 24 mL/min/1.73m2 / ICD-10 N18.4) presenting with fluid overload (bilateral pedal edema, exertional breathlessness, reduced exercise tolerance). Labs show UACR 780 mg/g (A3), HbA1c 7.4%, BP 154/92 mmHg, and mild hyperkalemia (K+ 5.3 mmol/L). Consistent with Cardiorenal Syndrome. Metformin strictly contraindicated (eGFR < 30); SGLT2 inhibitor (Empagliflozin) strongly indicated for cardiorenal protection and HF hospitalization reduction; Loop diuretic indicated for volume overload.",
+    "expected_drug": "SGLT2 Inhibitor (Empagliflozin) / Loop Diuretic"
   }
 ]

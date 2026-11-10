@@ -13,46 +13,125 @@
     <owl:ObjectProperty rdf:about="#hasCondition"/>
     <owl:ObjectProperty rdf:about="#hasPrescribedDrug"/>
 
-    <!-- Clinical Classes -->
+    <!-- Base Clinical Classes -->
     <owl:Class rdf:about="#Patient"/>
     <owl:Class rdf:about="#Condition"/>
     <owl:Class rdf:about="#Medication"/>
 
+    <!-- Granular KDIGO CKD Stages -->
+    <owl:Class rdf:about="#CKD_Stage_3a">
+        <rdfs:subClassOf rdf:resource="#Condition"/>
+    </owl:Class>
+    <owl:Class rdf:about="#CKD_Stage_3b">
+        <rdfs:subClassOf rdf:resource="#Condition"/>
+    </owl:Class>
+    <owl:Class rdf:about="#CKD_Stage_4">
+        <rdfs:subClassOf rdf:resource="#Condition"/>
+    </owl:Class>
+    <owl:Class rdf:about="#CKD_Stage_5">
+        <rdfs:subClassOf rdf:resource="#Condition"/>
+    </owl:Class>
     <owl:Class rdf:about="#CKD_Stage_4_5">
         <rdfs:subClassOf rdf:resource="#Condition"/>
     </owl:Class>
 
+    <!-- Cardiometabolic Comorbidities & Electrolyte Disorders -->
+    <owl:Class rdf:about="#Type_2_Diabetes">
+        <rdfs:subClassOf rdf:resource="#Condition"/>
+    </owl:Class>
+    <owl:Class rdf:about="#Hypertension">
+        <rdfs:subClassOf rdf:resource="#Condition"/>
+    </owl:Class>
+    <owl:Class rdf:about="#Heart_Failure">
+        <rdfs:subClassOf rdf:resource="#Condition"/>
+    </owl:Class>
+    <owl:Class rdf:about="#Cardiorenal_Syndrome">
+        <rdfs:subClassOf rdf:resource="#Condition"/>
+    </owl:Class>
+    <owl:Class rdf:about="#Hyperkalemia">
+        <rdfs:subClassOf rdf:resource="#Condition"/>
+    </owl:Class>
+    <owl:Class rdf:about="#PediatricNephropathy">
+        <rdfs:subClassOf rdf:resource="#Condition"/>
+    </owl:Class>
+    <owl:Class rdf:about="#Type_1_Diabetes">
+        <rdfs:subClassOf rdf:resource="#Condition"/>
+    </owl:Class>
+
+    <!-- Medication Classes -->
     <owl:Class rdf:about="#Metformin">
         <rdfs:subClassOf rdf:resource="#Medication"/>
     </owl:Class>
-
-    <!-- Declaration of Lisinopril as Medication -->
     <owl:Class rdf:about="#Lisinopril">
         <rdfs:subClassOf rdf:resource="#Medication"/>
     </owl:Class>
+    <owl:Class rdf:about="#Insulin">
+        <rdfs:subClassOf rdf:resource="#Medication"/>
+    </owl:Class>
+    <owl:Class rdf:about="#Amlodipine">
+        <rdfs:subClassOf rdf:resource="#Medication"/>
+    </owl:Class>
+    <owl:Class rdf:about="#Losartan">
+        <rdfs:subClassOf rdf:resource="#Medication"/>
+    </owl:Class>
+    <owl:Class rdf:about="#SGLT2_Inhibitor">
+        <rdfs:subClassOf rdf:resource="#Medication"/>
+    </owl:Class>
+    <owl:Class rdf:about="#GLP1_RA">
+        <rdfs:subClassOf rdf:resource="#Medication"/>
+    </owl:Class>
+    <owl:Class rdf:about="#Sulfonylurea">
+        <rdfs:subClassOf rdf:resource="#Medication"/>
+    </owl:Class>
+    <owl:Class rdf:about="#Loop_Diuretic">
+        <rdfs:subClassOf rdf:resource="#Medication"/>
+    </owl:Class>
 
-    <!-- Axiom: Unsafe ACE-inhibitor prescription in CKD Stage 4/5 -->
-    <owl:Class rdf:about="#UnsafeACEiPrescription">
+    <!-- ======================================================== -->
+    <!-- SAFETY AXIOMS (EQUIVALENT CLASS INTERSECTIONS)            -->
+    <!-- ======================================================== -->
+
+    <!-- Axiom 1: Metformin contraindicated in advanced CKD Stage 4 (eGFR < 30) -->
+    <owl:Class rdf:about="#UnsafeMetforminStage4">
         <owl:equivalentClass>
             <owl:Class>
                 <owl:intersectionOf rdf:parseType="Collection">
                     <rdf:Description rdf:about="#Patient"/>
                     <owl:Restriction>
                         <owl:onProperty rdf:resource="#hasCondition"/>
-                        <owl:someValuesFrom rdf:resource="#CKD_Stage_4_5"/>
+                        <owl:someValuesFrom rdf:resource="#CKD_Stage_4"/>
                     </owl:Restriction>
                     <owl:Restriction>
                         <owl:onProperty rdf:resource="#hasPrescribedDrug"/>
-                        <owl:someValuesFrom rdf:resource="#Lisinopril"/>
+                        <owl:someValuesFrom rdf:resource="#Metformin"/>
                     </owl:Restriction>
                 </owl:intersectionOf>
             </owl:Class>
         </owl:equivalentClass>
-        <rdfs:comment>Lisinopril/ACE-i carries severe hyperkalemia and acute renal failure risks in Stage 4/5 CKD.</rdfs:comment>
+        <rdfs:comment>Metformin is strictly contraindicated in CKD Stage 4 (eGFR &lt; 30 mL/min/1.73m²) due to high risk of fatal lactic acidosis.</rdfs:comment>
     </owl:Class>
-    
-    <!-- Contraindicated Patient Class (Axiom Definition) -->
-    <!-- A patient with CKD Stage 4/5 taking Metformin violates safety rules -->
+
+    <!-- Axiom 2: Metformin contraindicated in CKD Stage 5 -->
+    <owl:Class rdf:about="#UnsafeMetforminStage5">
+        <owl:equivalentClass>
+            <owl:Class>
+                <owl:intersectionOf rdf:parseType="Collection">
+                    <rdf:Description rdf:about="#Patient"/>
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="#hasCondition"/>
+                        <owl:someValuesFrom rdf:resource="#CKD_Stage_5"/>
+                    </owl:Restriction>
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="#hasPrescribedDrug"/>
+                        <owl:someValuesFrom rdf:resource="#Metformin"/>
+                    </owl:Restriction>
+                </owl:intersectionOf>
+            </owl:Class>
+        </owl:equivalentClass>
+        <rdfs:comment>Metformin is strictly contraindicated in kidney failure / CKD Stage 5 (eGFR &lt; 15 mL/min/1.73m²).</rdfs:comment>
+    </owl:Class>
+
+    <!-- Axiom 3: Backwards compatible generic CKD_Stage_4_5 Metformin -->
     <owl:Class rdf:about="#UnsafeMetforminPrescription">
         <owl:equivalentClass>
             <owl:Class>
@@ -69,27 +148,50 @@
                 </owl:intersectionOf>
             </owl:Class>
         </owl:equivalentClass>
-        <rdfs:comment>Metformin is contraindicated in advanced CKD due to high risk of fatal lactic acidosis.</rdfs:comment>
+        <rdfs:comment>Metformin is contraindicated in advanced CKD Stage 4/5 due to fatal lactic acidosis risk.</rdfs:comment>
     </owl:Class>
 
-    <!-- Pediatric & Rare Disease Classes -->
-    <owl:Class rdf:about="#PediatricNephropathy">
-        <rdfs:subClassOf rdf:resource="#Condition"/>
+    <!-- Axiom 4: ACE-inhibitor (Lisinopril) contraindicated in Hyperkalemia -->
+    <owl:Class rdf:about="#UnsafeACEiHyperkalemia">
+        <owl:equivalentClass>
+            <owl:Class>
+                <owl:intersectionOf rdf:parseType="Collection">
+                    <rdf:Description rdf:about="#Patient"/>
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="#hasCondition"/>
+                        <owl:someValuesFrom rdf:resource="#Hyperkalemia"/>
+                    </owl:Restriction>
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="#hasPrescribedDrug"/>
+                        <owl:someValuesFrom rdf:resource="#Lisinopril"/>
+                    </owl:Restriction>
+                </owl:intersectionOf>
+            </owl:Class>
+        </owl:equivalentClass>
+        <rdfs:comment>High-dose ACE-inhibitors (Lisinopril) are contraindicated in active hyperkalemia (K+ &gt; 5.0 mmol/L) due to fatal cardiac arrhythmia risk.</rdfs:comment>
     </owl:Class>
 
-    <owl:Class rdf:about="#Type_1_Diabetes">
-        <rdfs:subClassOf rdf:resource="#Condition"/>
+    <!-- Axiom 5: ACE-inhibitor (Lisinopril) in advanced CKD Stage 4/5 -->
+    <owl:Class rdf:about="#UnsafeACEiPrescription">
+        <owl:equivalentClass>
+            <owl:Class>
+                <owl:intersectionOf rdf:parseType="Collection">
+                    <rdf:Description rdf:about="#Patient"/>
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="#hasCondition"/>
+                        <owl:someValuesFrom rdf:resource="#CKD_Stage_4_5"/>
+                    </owl:Restriction>
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="#hasPrescribedDrug"/>
+                        <owl:someValuesFrom rdf:resource="#Lisinopril"/>
+                    </owl:Restriction>
+                </owl:intersectionOf>
+            </owl:Class>
+        </owl:equivalentClass>
+        <rdfs:comment>Lisinopril carries severe hyperkalemia and acute renal decline risks in advanced CKD Stage 4/5.</rdfs:comment>
     </owl:Class>
 
-    <owl:Class rdf:about="#Sulfonylurea">
-        <rdfs:subClassOf rdf:resource="#Medication"/>
-    </owl:Class>
-
-    <owl:Class rdf:about="#SGLT2_Inhibitor">
-        <rdfs:subClassOf rdf:resource="#Medication"/>
-    </owl:Class>
-
-    <!-- Axiom: Unsafe oral hypoglycemic in pediatric nephropathy -->
+    <!-- Axiom 6: Unsafe oral hypoglycemic in pediatric nephropathy -->
     <owl:Class rdf:about="#UnsafePediatricOralHypoglycemicPrescription">
         <owl:equivalentClass>
             <owl:Class>

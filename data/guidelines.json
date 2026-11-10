@@ -39,7 +39,31 @@
     "id": "ADA_GLY_2024_03",
     "source": "ADA Standards of Medical Care in Diabetes 2024",
     "topic": "Glycemic Management in Advanced Renal Impairment",
-    "text": "In patients with Type 2 Diabetes and severe CKD Stage 4 or 5 where oral antidiabetic agents like Metformin and SGLT2 inhibitors are contraindicated or insufficient, Insulin therapy (basal or prandial regimens) is safe and effective. Dose adjustments are necessary to prevent hypoglycemia due to reduced renal clearance of insulin."
+    "text": "In patients with Type 2 Diabetes and CKD, glycemic targets should be individualized. Insulin therapy (basal or prandial regimens) is indicated when glycemic control cannot be achieved with organ-protective non-insulin agents (such as SGLT2 inhibitors or GLP-1 receptor agonists) or in severe hyperglycemic decompensation. In advanced CKD, decreased renal clearance of insulin significantly elevates hypoglycemia risk, requiring cautious dose titration and avoiding automatic unindicated insulin initiation."
+  },
+  {
+    "id": "KDIGO_SGLT2I_2023",
+    "source": "KDIGO 2023 Clinical Practice Guideline Recommendation 1.3/1.4",
+    "topic": "SGLT2 Inhibitor Organ Protection in CKD and Heart Failure",
+    "text": "In patients with Type 2 Diabetes and Chronic Kidney Disease with eGFR >= 20 mL/min/1.73m2, treatment with an SGLT2 inhibitor (Empagliflozin 10mg or Dapagliflozin 10mg daily) is strongly recommended (Level 1A). SGLT2 inhibitors provide robust cardiorenal protection, significantly reducing CKD progression, cardiovascular mortality, and heart failure hospitalizations regardless of baseline HbA1c."
+  },
+  {
+    "id": "KDIGO_METFORMIN_G3B_2023",
+    "source": "KDIGO 2023 / ADA 2024 Standards of Care",
+    "topic": "Metformin Dosing in CKD Stage 3b",
+    "text": "In CKD Stage 3b (eGFR 30-44 mL/min/1.73m2), Metformin is NOT automatically contraindicated. Metformin dose should be reduced to a maximum of 1000 mg/day (or 500 mg twice daily) with close eGFR monitoring every 3 to 6 months. Metformin is only strictly contraindicated when eGFR drops below 30 mL/min/1.73m2 (Stages 4 and 5) due to lactic acidosis risk."
+  },
+  {
+    "id": "AHA_ACC_HF_CARDIORENAL_2022",
+    "source": "AHA/ACC/HFSA 2022 Heart Failure Guidelines",
+    "topic": "Cardiorenal Syndrome & Congestion Management",
+    "text": "Patients presenting with concomitant Heart Failure and chronic renal impairment (Cardiorenal Syndrome Type 2/4) with signs of fluid overload (pedal edema, exertional dyspnea, orthopnea) require active decongestion using loop diuretics (Furosemide or Torsemide). SGLT2 inhibitors are recommended as foundational therapy down to eGFR 20 mL/min/1.73m2 to improve renal hemodynamics and reduce HF hospitalizations."
+  },
+  {
+    "id": "KDIGO_HYPERKALEMIA_MANAGEMENT_2023",
+    "source": "KDIGO 2023 Blood Pressure & Electrolyte Consensus",
+    "topic": "Management of Hyperkalemia in CKD",
+    "text": "Serum potassium levels between 5.1 and 5.4 mmol/L represent mild hyperkalemia requiring dietary potassium review, avoidance or dose-reduction of potassium-sparing agents, and repeat electrolyte panel within 1-2 weeks. High-dose ACE inhibitors or ARBs should be reviewed or held if K+ exceeds 5.0 mmol/L without potassium-binding therapy."
   },
   {
     "id": "ADA_GLY_2024_FIRST_LINE",
