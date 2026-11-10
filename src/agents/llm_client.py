@@ -331,14 +331,22 @@ class LLMClinicalAgent:
                 f"- Serum Potassium: Current potassium is {k_val} mmol/L ({k_eval['status']}: {k_eval['message']}). "
                 f"Preserve this exact value ({k_val} mmol/L). Do NOT hallucinate false hyperkalemia alarms if potassium <= 5.0."
             )
-            if k_val >= 5.5:
+            if k_val >= 6.5:
                 rules_list.append(
-                    "- Hyperkalemia Management: Prompt clinical assessment within 24-72 hours and 12-lead ECG indicated. "
-                    "Per KDIGO 2023, do NOT permanently discontinue ACEi/ARB solely due to CKD stage; consider temporary hold, "
-                    "dietary adjustment, loop diuretic, or potassium binder."
+                    f"- MEDICAL EMERGENCY: Severe Hyperkalemia ({k_val} mmol/L). Immediate emergency department transfer required. "
+                    "Continuous cardiac telemetry and urgent 12-lead ECG. Immediate myocardial membrane stabilization (IV Calcium Gluconate) "
+                    "and intracellular shift (IV Insulin + Dextrose, Nebulized Albuterol), followed by active potassium elimination. "
+                    "All RAAS inhibitors (ACE inhibitors like Lisinopril, ARBs like Losartan) and MRAs must be IMMEDIATELY HELD and NOT prescribed. "
+                    "For hypertension in severe hyperkalemia or advanced CKD, use Dihydropyridine CCB (Amlodipine 5-10mg daily) alone."
+                )
+            elif k_val >= 5.5:
+                rules_list.append(
+                    f"- Hyperkalemia Management (Potassium {k_val} mmol/L): Prompt clinical assessment within 24-48 hours and 12-lead ECG indicated. "
+                    "Per KDIGO 2023, hold or down-titrate RAAS inhibitors, initiate dietary potassium restriction, and consider loop diuretics "
+                    "or potassium binder therapy (e.g. Patiromer, Sodium Zirconium Cyclosilicate). Preferred antihypertensive is Amlodipine."
                 )
 
-        # Type 1 vs Type 2 Diabetes Rules
+        # Type 1 vs Type 2 Diabetes vs Non-Diabetic Rules
         if is_t1d:
             rules_list.append(
                 "- Type 1 Diabetes: Subcutaneous insulin therapy is absolute life-essential and non-negotiable. "
@@ -347,8 +355,8 @@ class LLMClinicalAgent:
                 "and proposing oral monotherapy without insulin is strictly contraindicated due to risk of fatal diabetic ketoacidosis (DKA). "
                 "If nephropathy or kidney involvement is present, ICD-10 code is E10.21 (Type 1 diabetes with nephropathy)."
             )
-        else:
-            # Metformin Staging Rules in Type 2 Diabetes / General
+        elif is_t2d or "diabetes" in cond_str:
+            # Metformin Staging Rules in Type 2 Diabetes
             if egfr is not None:
                 if egfr >= 30:
                     if 30 <= egfr < 45:
@@ -366,6 +374,13 @@ class LLMClinicalAgent:
                         f"- Metformin: Strictly contraindicated at eGFR {egfr} (< 30 mL/min/1.73m²) due to lactic acidosis risk (KDIGO Level 1A). "
                         "Must be withheld/discontinued."
                     )
+        else:
+            rules_list.append(
+                "- Non-Diabetic Patient: Patient has NO diagnosis of diabetes mellitus. "
+                "Antidiabetic medications (such as Metformin, sulfonylureas, or insulin) are NOT indicated and must not be prescribed. "
+                "For hypertension with albuminuria, first-line therapy is an ACE inhibitor (Lisinopril 10-20mg daily) or ARB (Losartan 50mg daily) "
+                "to provide blood pressure control and antiproteinuric kidney protection."
+            )
 
         # Hypertension in Advanced CKD
         has_htn = "hypertension" in cond_str or "htn" in cond_str or (sbp is not None and sbp >= 130)

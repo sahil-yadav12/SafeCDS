@@ -112,7 +112,7 @@ def test_workflow_end_to_end_self_correction():
         "reasoning": None,
         "retries": 0,
         "max_retries": 3,
-        "violations": [],
+        "violations": ["Lisinopril is contraindicated for patients with CKD Stage 4/5."],
         "status": "PENDING",
         "final_output": {}
     }

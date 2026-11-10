@@ -488,13 +488,59 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="axioms-cards-container"></div>
             </div>
 
-            <!-- TAB: CLINICAL GUIDELINES -->
-            <div id="tab-guidelines" class="tab-content hidden feature-card p-6 space-y-4">
-                <div class="border-b border-[var(--color-border)] pb-3">
-                    <h2 class="font-display text-2xl text-[var(--color-text-primary)]">Clinical Practice Guidelines Corpus</h2>
-                    <p class="text-xs text-[var(--color-text-muted)] mt-1">Indexed KDIGO 2023, ADA 2024, ACC/AHA, and ISPAD 2024 Pediatric recommendations for hybrid RRF retrieval.</p>
+            <!-- TAB: CLINICAL GUIDELINES & KNOWLEDGE BASE -->
+            <div id="tab-guidelines" class="tab-content hidden feature-card p-6 space-y-5">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[var(--color-border)] pb-4 gap-3">
+                    <div>
+                        <h2 class="font-display text-2xl text-[var(--color-text-primary)]">Autonomous Medical Knowledge Base</h2>
+                        <p class="text-xs text-[var(--color-text-muted)] mt-1">Persistent ChromaDB vector store grounded in KDIGO 2023, ADA 2024, AHA/ACC, ISPAD, openFDA, and Europe PMC.</p>
+                    </div>
+                    <button type="button" id="btn-trigger-discovery" class="btn-primary text-xs self-start sm:self-auto flex items-center space-x-1.5">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                        <span>Trigger Autonomous Discovery</span>
+                    </button>
                 </div>
-                <div class="space-y-3" id="guidelines-full-list"></div>
+
+                <!-- Knowledge Base Stats Strip -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs" id="kb-stats-grid">
+                    <div class="bg-[var(--bg-canvas)] p-3 rounded-[12px] border border-[var(--color-border)]">
+                        <span class="text-[var(--color-text-muted)] block text-[11px]">Total Chunks Indexed</span>
+                        <span class="font-mono text-base font-medium text-[var(--color-text-primary)]" id="kb-stat-total">--</span>
+                    </div>
+                    <div class="bg-[var(--bg-canvas)] p-3 rounded-[12px] border border-[var(--color-border)]">
+                        <span class="text-[var(--color-text-muted)] block text-[11px]">Clinical Guidelines</span>
+                        <span class="font-mono text-base font-medium text-[var(--color-text-primary)]" id="kb-stat-guidelines">--</span>
+                    </div>
+                    <div class="bg-[var(--bg-canvas)] p-3 rounded-[12px] border border-[var(--color-border)]">
+                        <span class="text-[var(--color-text-muted)] block text-[11px]">FDA Drug Labels</span>
+                        <span class="font-mono text-base font-medium text-[var(--color-text-primary)]" id="kb-stat-drugs">--</span>
+                    </div>
+                    <div class="bg-[var(--bg-canvas)] p-3 rounded-[12px] border border-[var(--color-border)]">
+                        <span class="text-[var(--color-text-muted)] block text-[11px]">Persistent Engine</span>
+                        <span class="font-mono text-xs font-medium text-[var(--color-accent-teal)]">ChromaDB + Nomic</span>
+                    </div>
+                </div>
+
+                <!-- Real-time Passage Search Tool -->
+                <div class="bg-[var(--bg-canvas)] p-4 rounded-[16px] border border-[var(--color-border)] space-y-3">
+                    <span class="text-xs font-medium text-[var(--color-text-primary)] block">Inspect Indexed Evidence Passages</span>
+                    <div class="flex gap-2">
+                        <input type="text" id="input-kb-search" placeholder="Search knowledge base (e.g., 'Metformin CKD 3b', 'SGLT2 heart failure', 'ISPAD pediatric')..." class="flex-1 text-xs px-3 py-2 rounded-[10px] bg-[var(--bg-surface-elevated)] border border-[var(--color-border)]">
+                        <select id="select-kb-age" class="text-xs px-2.5 py-2 rounded-[10px] bg-[var(--bg-surface-elevated)] border border-[var(--color-border)]">
+                            <option value="adult">Adult</option>
+                            <option value="pediatric">Pediatric</option>
+                            <option value="all">All</option>
+                        </select>
+                        <button type="button" id="btn-kb-search" class="btn-secondary text-xs">Search</button>
+                    </div>
+                    <div id="kb-search-results" class="space-y-2 text-xs hidden"></div>
+                </div>
+
+                <!-- Sources Catalog -->
+                <div class="space-y-3">
+                    <h3 class="text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider">Authoritative Source Registry Catalog</h3>
+                    <div class="space-y-3" id="guidelines-full-list"></div>
+                </div>
             </div>
 
         </div>

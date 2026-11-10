@@ -300,8 +300,12 @@ class PatientContext:
         narrative_str = self.clinical_narrative.lower()
         return (
             "type_1_diabetes" in conds_str
+            or "type 1 diabetes" in conds_str
             or "type 1 diabetes" in narrative_str
+            or "type_1" in conds_str
+            or "type 1" in conds_str
             or "t1d" in conds_str
+            or "t1dm" in conds_str
             or "t1dm" in narrative_str
         )
 
@@ -314,9 +318,15 @@ class PatientContext:
         hba1c = self.lab_values.get("hba1c")
         return (
             "type_2_diabetes" in conds_str
+            or "type 2 diabetes" in conds_str
             or "type 2 diabetes" in narrative_str
+            or "type_2" in conds_str
+            or "type 2" in conds_str
             or "t2d" in conds_str
+            or "t2dm" in conds_str
             or "t2dm" in narrative_str
+            or "diabetes mellitus" in conds_str
+            or "diabetes" in conds_str
             or (hba1c is not None and hba1c >= 6.5)
         )
 

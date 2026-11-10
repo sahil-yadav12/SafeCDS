@@ -712,34 +712,141 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // ========================================================
-    // 10. GUIDELINES KNOWLEDGE BASE TAB
+    // 10. GUIDELINES & PERSISTENT KNOWLEDGE BASE TAB
     // ========================================================
     async function loadGuidelinesTab() {
         const container = document.getElementById("guidelines-full-list");
         if (!container) return;
-        container.innerHTML = `<span class="text-xs text-[var(--color-text-muted)]">Loading clinical practice guidelines corpus...</span>`;
+        container.innerHTML = `<span class="text-xs text-[var(--color-text-muted)]">Loading authoritative medical sources catalog...</span>`;
 
         try {
-            const res = await fetch("/api/guidelines");
+            const res = await fetch("/api/admin/sources");
             const data = await res.json();
-            const list = Array.isArray(data) ? data : (data.guidelines || []);
+            const sources = data.sources || [];
+            const vsStats = data.vector_store_stats || {};
+
+            // Update stats strip
+            const statTotal = document.getElementById("kb-stat-total");
+            const statGuidelines = document.getElementById("kb-stat-guidelines");
+            const statDrugs = document.getElementById("kb-stat-drugs");
+            if (statTotal) statTotal.textContent = vsStats.total_chunks || sources.reduce((acc, s) => acc + (s.total_chunks || 0), 0);
+            if (statGuidelines) statGuidelines.textContent = (vsStats.clinical_guidelines || 0) + " chunks";
+            if (statDrugs) statDrugs.textContent = (vsStats.drug_information || 0) + " chunks";
+
             container.innerHTML = "";
-            list.forEach(g => {
+            if (sources.length === 0) {
+                container.innerHTML = `<span class="text-xs text-[var(--color-text-muted)]">No sources cataloged.</span>`;
+                return;
+            }
+
+            sources.forEach(s => {
                 const div = document.createElement("div");
-                div.className = "bg-[var(--bg-canvas)] border border-[var(--color-border)] p-4 rounded-[16px] text-xs space-y-1.5";
+                div.className = "bg-[var(--bg-canvas)] border border-[var(--color-border)] p-4 rounded-[16px] text-xs space-y-2";
+                const tierBadge = s.credibility_tier === "Tier_1" 
+                    ? `<span class="badge-status badge-verified font-mono text-[10px]">Tier 1: Official Authority</span>`
+                    : (s.credibility_tier === "Tier_2" 
+                        ? `<span class="badge-status badge-info font-mono text-[10px]">Tier 2: Peer-Reviewed</span>` 
+                        : `<span class="badge-status badge-warning font-mono text-[10px]">Tier 3: Drug Label</span>`);
+                
+                const statusBadge = s.is_active 
+                    ? `<span class="badge-status badge-verified font-mono text-[10px]">Active</span>`
+                    : `<span class="badge-status badge-danger font-mono text-[10px]">Superseded</span>`;
+
                 div.innerHTML = `
-                    <div class="flex items-center justify-between">
-                        <span class="font-medium text-[var(--color-text-primary)]">${g.source}</span>
-                        <span class="badge-status badge-info font-mono text-[10px]">${g.id}</span>
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                        <div class="flex items-center space-x-2">
+                            <span class="font-medium text-[var(--color-text-primary)] text-sm">${s.title}</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            ${tierBadge}
+                            ${statusBadge}
+                        </div>
                     </div>
-                    <div class="text-[var(--color-text-muted)] font-medium">${g.topic}</div>
-                    <p class="text-[var(--color-text-secondary)] leading-relaxed">"${g.text}"</p>
+                    <div class="flex flex-wrap gap-x-4 gap-y-1 text-[var(--color-text-muted)] text-[11px] font-mono">
+                        <span>Org: ${s.organization_name || s.org_id}</span>
+                        <span>Version: ${s.guideline_version || '1.0'}</span>
+                        <span>Pub Date: ${s.publication_date || 'N/A'}</span>
+                        <span>Chunks: ${s.total_chunks || 0}</span>
+                        <span>Specialty: ${s.specialty || 'General'}</span>
+                    </div>
+                    ${s.evidence_grade ? `<div class="text-[11px] text-[var(--color-accent-teal)] font-medium">Evidence Level: ${s.evidence_grade}</div>` : ''}
+                    ${s.original_url ? `<div class="text-[11px] truncate"><a href="${s.original_url}" target="_blank" rel="noopener noreferrer" class="text-[var(--color-accent-blue)] hover:underline">${s.original_url}</a></div>` : ''}
                 `;
                 container.appendChild(div);
             });
         } catch (err) {
-            console.error("Guidelines error:", err);
+            console.error("Knowledge base sources error:", err);
+            container.innerHTML = `<span class="text-xs text-[var(--status-danger-text)]">Failed to load medical sources catalog.</span>`;
         }
+    }
+
+    // Hook up autonomous discovery trigger
+    const btnTriggerDiscovery = document.getElementById("btn-trigger-discovery");
+    if (btnTriggerDiscovery) {
+        btnTriggerDiscovery.addEventListener("click", async () => {
+            const origText = btnTriggerDiscovery.innerHTML;
+            btnTriggerDiscovery.disabled = true;
+            btnTriggerDiscovery.innerHTML = `<span class="spinner"></span><span>Discovering & Ingesting...</span>`;
+            try {
+                const res = await fetch("/api/admin/discover", { method: "POST" });
+                const data = await res.json();
+                alert(`Autonomous Discovery Cycle Completed!\nDiscovered: ${data.discovery_summary?.records_discovered || 0} records\nIngested: ${data.discovery_summary?.records_ingested || 0} records.`);
+                await loadGuidelinesTab();
+            } catch (err) {
+                alert("Discovery cycle failed: " + err.message);
+            } finally {
+                btnTriggerDiscovery.disabled = false;
+                btnTriggerDiscovery.innerHTML = origText;
+            }
+        });
+    }
+
+    // Hook up real-time passage search
+    const btnKbSearch = document.getElementById("btn-kb-search");
+    const inputKbSearch = document.getElementById("input-kb-search");
+    const selectKbAge = document.getElementById("select-kb-age");
+    const kbSearchResults = document.getElementById("kb-search-results");
+
+    if (btnKbSearch && inputKbSearch) {
+        btnKbSearch.addEventListener("click", async () => {
+            const query = inputKbSearch.value.trim();
+            if (!query) return;
+            const ageGroup = selectKbAge ? selectKbAge.value : "adult";
+            btnKbSearch.disabled = true;
+            btnKbSearch.textContent = "Searching...";
+            kbSearchResults.classList.remove("hidden");
+            kbSearchResults.innerHTML = `<span class="text-xs text-[var(--color-text-muted)]">Searching persistent vector store...</span>`;
+
+            try {
+                const res = await fetch(`/api/admin/passages?q=${encodeURIComponent(query)}&age_group=${encodeURIComponent(ageGroup)}&top_k=3`);
+                const data = await res.json();
+                const passages = data.passages || [];
+                kbSearchResults.innerHTML = "";
+
+                if (passages.length === 0) {
+                    kbSearchResults.innerHTML = `<div class="p-2 text-xs text-[var(--color-text-muted)]">No relevant passages found.</div>`;
+                } else {
+                    passages.forEach(p => {
+                        const card = document.createElement("div");
+                        card.className = "bg-[var(--bg-surface-elevated)] p-3 rounded-[12px] border border-[var(--color-border)] space-y-1";
+                        card.innerHTML = `
+                            <div class="flex items-center justify-between text-[11px]">
+                                <span class="font-medium text-[var(--color-text-primary)]">[${p.source}] ${p.title}</span>
+                                <span class="font-mono text-[var(--color-accent-teal)]">RRF Score: ${p.score}</span>
+                            </div>
+                            <div class="text-[11px] text-[var(--color-text-muted)] font-medium">${p.topic} (${p.metadata?.age_group || 'adult'})</div>
+                            <p class="text-xs text-[var(--color-text-secondary)] leading-relaxed">"${p.text}"</p>
+                        `;
+                        kbSearchResults.appendChild(card);
+                    });
+                }
+            } catch (err) {
+                kbSearchResults.innerHTML = `<div class="p-2 text-xs text-[var(--status-danger-text)]">Search error: ${err.message}</div>`;
+            } finally {
+                btnKbSearch.disabled = false;
+                btnKbSearch.textContent = "Search";
+            }
+        });
     }
 
     // ========================================================

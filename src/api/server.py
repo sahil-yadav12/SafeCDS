@@ -22,6 +22,10 @@ from src.reasoning.clinical_rules import (
 )
 from src.models.patient_context import PatientContext, format_lab_value
 from src.evaluation.run_benchmark import run_cohort_benchmark
+from src.knowledge.source_registry import SourceRegistry
+from src.knowledge.vector_store import PersistentMedicalVectorStore
+from src.knowledge.ingest_pipeline import ClinicalDocumentIngestionPipeline
+from src.knowledge.acquisition_agent import AutonomousKnowledgeAcquisitionAgent
 
 ONTOLOGY_PATH = os.path.join("ontologies", "cardiometabolic_core.owl")
 GUIDELINES_PATH = os.path.join("data", "guidelines.json")
@@ -31,7 +35,7 @@ COHORT_PATH = os.path.join("data", "cohort.json")
 app = FastAPI(
     title="SafeCDS: Neuro-Symbolic Agentic RAG Clinical Decision Support",
     description="Locally grounded, formally verified clinical decision support system for cardiometabolic multi-morbidity.",
-    version="2.2.0"
+    version="2.3.0"
 )
 
 # CORS middleware
@@ -44,8 +48,11 @@ app.add_middleware(
 )
 
 # Shared singletons
+registry = SourceRegistry()
+vector_store = PersistentMedicalVectorStore()
+acquisition_agent = AutonomousKnowledgeAcquisitionAgent(registry=registry, vector_store=vector_store)
+retriever = HybridClinicalRetriever(vector_store=vector_store, registry=registry)
 verifier = ClinicalVerifier(ontology_path=ONTOLOGY_PATH)
-retriever = HybridClinicalRetriever(guidelines_path=GUIDELINES_PATH)
 pdf_parser = ClinicalPDFParser()
 llm_agent = LLMClinicalAgent(provider="local")
 safecds_app = build_safecds_graph(verifier, llm_agent=llm_agent, retriever=retriever)
@@ -79,13 +86,37 @@ class ChatRequest(BaseModel):
     api_key: Optional[str] = Field(default="")
 
 
+class IngestDocumentRequest(BaseModel):
+    title: str
+    org_id: str
+    document_type: str = "clinical_guideline"
+    original_url: Optional[str] = ""
+    publication_date: Optional[str] = ""
+    guideline_version: Optional[str] = "1.0"
+    specialty: Optional[str] = "General"
+    content: str
+    target_collection: Optional[str] = "clinical_guidelines"
+    evidence_grade: Optional[str] = "Authoritative Guideline"
+    selection_rationale: Optional[str] = None
+
+
+class DiscoveryRequest(BaseModel):
+    drugs: Optional[List[str]] = None
+    topics: Optional[List[str]] = None
+
+
+class DeactivateRequest(BaseModel):
+    reason: Optional[str] = "Superseded by newer clinical practice guideline"
+
+
 @app.get("/api/health")
 def get_health():
     """Health check endpoint."""
     return {
         "status": "healthy",
         "verifier": "online (axiomatic fast-path & HermiT DL ready)",
-        "retriever": f"online ({len(retriever.corpus)} guideline passages indexed)",
+        "retriever": f"online ({len(retriever.corpus_chunks)} persistent chunks across 6 domain collections)",
+        "vector_store": vector_store.get_stats(),
         "pdf_parser": "ready (pypdfium2)",
         "active_provider": llm_agent.provider,
         "supported_providers": ["local", "gemini", "openai", "antigravity"]
@@ -461,6 +492,87 @@ def run_benchmark():
         return JSONResponse(content={"status": "error", "message": "Benchmark results file not found"})
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# -------------------------------------------------------------
+# Admin & Autonomous Medical Knowledge Base Endpoints (Phase 15)
+# -------------------------------------------------------------
+
+@app.get("/api/admin/sources")
+def get_sources_catalog():
+    """Returns the full authoritative medical sources registry catalog and vector store stats."""
+    sources = registry.list_sources_with_stats()
+    vs_stats = vector_store.get_stats()
+    return {
+        "status": "success",
+        "total_sources": len(sources),
+        "vector_store_stats": vs_stats,
+        "sources": sources
+    }
+
+
+@app.post("/api/admin/discover")
+def trigger_discovery(req: Optional[DiscoveryRequest] = None):
+    """Triggers an autonomous discovery and ingestion cycle across openFDA and Europe PMC."""
+    drugs = req.drugs if req else None
+    topics = req.topics if req else None
+    result = acquisition_agent.run_discovery_cycle(inquire_drugs=drugs, literature_queries=topics)
+    retriever._refresh_corpus()
+    return JSONResponse(content={"status": "success", "discovery_summary": result})
+
+
+@app.post("/api/admin/ingest")
+def manual_ingest_document(req: IngestDocumentRequest):
+    """Manually ingests an authoritative clinical document into registry and persistent vector DB."""
+    doc_id = f"{req.org_id.upper()}_{uuid.uuid4().hex[:8].upper()}"
+    meta = {
+        "doc_id": doc_id,
+        "title": req.title,
+        "org_id": req.org_id,
+        "document_type": req.document_type,
+        "original_url": req.original_url,
+        "publication_date": req.publication_date or time.strftime("%Y-%m-%d"),
+        "guideline_version": req.guideline_version,
+        "specialty": req.specialty,
+        "evidence_grade": req.evidence_grade,
+        "selection_rationale": req.selection_rationale or "Manually uploaded by clinical admin."
+    }
+    pipeline = ClinicalDocumentIngestionPipeline(registry=registry, vector_store=vector_store)
+    result = pipeline.ingest_document(
+        doc_metadata=meta,
+        raw_text=req.content,
+        target_collection=req.target_collection or "clinical_guidelines"
+    )
+    retriever._refresh_corpus()
+    return JSONResponse(content={"status": "success", "ingestion_result": result})
+
+
+@app.post("/api/admin/sources/{doc_id}/deactivate")
+def deactivate_source(doc_id: str, req: Optional[DeactivateRequest] = None):
+    """Deactivates a superseded or outdated clinical source in catalog and vector database."""
+    reason = req.reason if req else "Superseded by newer clinical practice guideline"
+    res = acquisition_agent.deactivate_superseded_source(doc_id, reason=reason)
+    retriever._refresh_corpus()
+    return JSONResponse(content={"status": "success", "deactivation": res})
+
+
+@app.get("/api/admin/passages")
+def search_admin_passages(q: str, age_group: str = "adult", top_k: int = 5):
+    """Inspects exact indexed chunks from the persistent knowledge base."""
+    results = retriever.retrieve_passages_with_scores(query=q, age_group=age_group, top_k=top_k)
+    return {
+        "query": q,
+        "age_group": age_group,
+        "count": len(results),
+        "passages": results
+    }
+
+
+@app.get("/api/admin/audit")
+def get_audit_trail(limit: int = 50):
+    """Returns ingestion audit log trail."""
+    logs = registry.get_audit_trail(limit=limit)
+    return {"status": "success", "count": len(logs), "logs": logs}
 
 
 # Static files mount

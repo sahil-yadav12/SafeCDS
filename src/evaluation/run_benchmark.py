@@ -1,7 +1,12 @@
 import os
+import sys
 import json
 import time
 from typing import List, Dict, Any
+
+# Ensure project root is in sys.path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+
 from src.reasoning.verifier import ClinicalVerifier
 from src.agents.workflow import build_safecds_graph
 
