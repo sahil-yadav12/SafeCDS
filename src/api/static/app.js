@@ -256,10 +256,10 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("input-creatinine").value = patient.creatinine;
 
         const potEl = document.getElementById("input-potassium");
-        if (potEl) potEl.value = (patient.potassium !== undefined && patient.potassium !== null) ? patient.potassium : 4.5;
+        if (potEl) potEl.value = (patient.potassium !== undefined && patient.potassium !== null) ? patient.potassium : "";
 
         const uacrEl = document.getElementById("input-uacr");
-        if (uacrEl) uacrEl.value = (patient.uacr !== undefined && patient.uacr !== null) ? patient.uacr : 30;
+        if (uacrEl) uacrEl.value = (patient.uacr !== undefined && patient.uacr !== null) ? patient.uacr : "";
 
         document.getElementById("clinical-narrative").value = patient.clinical_narrative;
 
@@ -481,15 +481,26 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
 
-        // Biomarkers Strip
-        document.getElementById("strip-egfr").textContent = `${labs.egfr || 22.0} mL/min`;
-        document.getElementById("strip-bp").textContent = `${labs.sbp || 138}/${labs.dbp || 84} mmHg`;
-        document.getElementById("strip-hba1c").textContent = `${labs.hba1c || 9.2}%`;
-        document.getElementById("strip-creatinine").textContent = `${labs.creatinine || 3.1} mg/dL`;
+        // Biomarkers Strip (Preserving exact values; never displaying fake defaults or None)
+        function formatBiomarker(val, unit) {
+            if (val === null || val === undefined || val === "") return "Not Tested";
+            return `${val} ${unit}`.trim();
+        }
+
+        document.getElementById("strip-egfr").textContent = formatBiomarker(labs.egfr, "mL/min");
+        if (labs.sbp && labs.dbp) {
+            document.getElementById("strip-bp").textContent = `${labs.sbp}/${labs.dbp} mmHg`;
+        } else if (labs.sbp) {
+            document.getElementById("strip-bp").textContent = `${labs.sbp} mmHg (SBP)`;
+        } else {
+            document.getElementById("strip-bp").textContent = "Not Tested";
+        }
+        document.getElementById("strip-hba1c").textContent = formatBiomarker(labs.hba1c, "%");
+        document.getElementById("strip-creatinine").textContent = formatBiomarker(labs.creatinine, "mg/dL");
         const stripK = document.getElementById("strip-potassium");
-        if (stripK) stripK.textContent = `${labs.potassium || 4.5} mmol/L`;
+        if (stripK) stripK.textContent = formatBiomarker(labs.potassium, "mmol/L");
         const stripUacr = document.getElementById("strip-uacr");
-        if (stripUacr) stripUacr.textContent = `${labs.uacr || 30} mg/g`;
+        if (stripUacr) stripUacr.textContent = formatBiomarker(labs.uacr, "mg/g");
 
         // Clinical Safety Alerts Panel
         const alertsContainer = document.getElementById("res-clinical-alerts-container");
@@ -829,7 +840,11 @@ document.addEventListener("DOMContentLoaded", () => {
                             sbp: parsed.sbp,
                             dbp: parsed.dbp,
                             hba1c: parsed.hba1c,
-                            creatinine: parsed.creatinine
+                            creatinine: parsed.creatinine,
+                            potassium: parsed.potassium,
+                            uacr: parsed.uacr,
+                            age: parsed.age,
+                            gender: parsed.gender
                         };
                         chatAttachedContext.filename = file.name;
 

@@ -222,7 +222,7 @@ class ClinicalPDFParser:
             except ValueError:
                 pass
 
-        # 12. Diagnosed Conditions Mapping (Accurate Staging)
+        # 12. Diagnosed Conditions Mapping (Accurate Staging & Strict T1D vs T2D Separation)
         lower_text = text.lower()
         if "ckd" in lower_text or "chronic kidney disease" in lower_text or (result["egfr"] is not None and result["egfr"] < 60):
             if result["egfr"] is not None:
@@ -239,11 +239,11 @@ class ClinicalPDFParser:
             else:
                 result["conditions"].append("Chronic_Kidney_Disease")
 
-        if any(w in lower_text for w in ["type 2 diabetes", "t2dm", "t2d", "type ii diabetes", "diabetes mellitus"]) or (result["hba1c"] is not None and result["hba1c"] >= 6.5):
-            result["conditions"].append("Type_2_Diabetes")
-
-        if any(w in lower_text for w in ["type 1 diabetes", "t1d", "type i diabetes"]):
+        is_t1d = any(w in lower_text for w in ["type 1 diabetes", "t1d", "type i diabetes", "juvenile diabetes"])
+        if is_t1d:
             result["conditions"].append("Type_1_Diabetes")
+        elif any(w in lower_text for w in ["type 2 diabetes", "t2dm", "t2d", "type ii diabetes", "diabetes mellitus"]) or (result["hba1c"] is not None and result["hba1c"] >= 6.5):
+            result["conditions"].append("Type_2_Diabetes")
 
         if any(w in lower_text for w in ["hypertension", "htn", "high blood pressure"]) or (result["sbp"] is not None and result["sbp"] >= 130):
             result["conditions"].append("Hypertension")
@@ -279,10 +279,20 @@ class ClinicalPDFParser:
             if term in lower_text and label not in result["symptoms"]:
                 result["symptoms"].append(label)
 
-        # 10. Documented Current Medications
-        med_catalog = ["metformin", "lisinopril", "insulin", "amlodipine", "losartan", "glipizide", "atorvastatin"]
+        # 14. Documented Current & Inquired Medications
+        result["inquired_medications"] = []
+        med_catalog = [
+            "metformin", "lisinopril", "insulin", "amlodipine", "losartan",
+            "glipizide", "atorvastatin", "empagliflozin", "dapagliflozin",
+            "semaglutide", "dulaglutide", "furosemide", "torsemide",
+            "spironolactone", "finerenone"
+        ]
         for med in med_catalog:
             if re.search(rf'\b{med}\b', lower_text):
-                result["current_medications"].append(med.capitalize())
+                cap = med.capitalize()
+                if cap not in result["current_medications"]:
+                    result["current_medications"].append(cap)
+                if cap not in result["inquired_medications"]:
+                    result["inquired_medications"].append(cap)
 
         return result

@@ -125,7 +125,7 @@ def run_cohort_benchmark():
     print(f"Self-Correction Success Rate  : {self_correction_rate:.1f}% ({self_corrected_count}/{failed_first_pass})")
     print(f"Overall Clinical Safety Rate  : {total_safe_rate:.1f}% ({first_pass_safe_count + self_corrected_count}/{total_patients})")
     print(f"Human Escalation Rate         : {(escalated_count / total_patients) * 100:.1f}% ({escalated_count}/{total_patients})")
-    print(f"Formal Violation Escape Rate  : {formal_violation_escape_rate:.1f}% (Guaranteed by HermiT)")
+    print(f"Formal Violation Escape Rate  : {formal_violation_escape_rate:.1f}% (Axiomatic consistency verified by HermiT)")
     print(f"Total Violations Intercepted  : {total_violations_caught}")
     print(f"Total Benchmark Run Time      : {elapsed_time:.2f}s")
     print("=" * 65)

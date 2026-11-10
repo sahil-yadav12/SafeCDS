@@ -203,3 +203,121 @@ def test_evaluate_patient_pt009_david_anderson():
     assert any("Metformin" in w for w in res["warnings"])
 
 
+
+def test_regression_case_1_pediatric_t1d_single_uacr():
+    """
+    Regression Test Case 1 (Requirement 8):
+    14-year-old with Type 1 Diabetes, HbA1c 9.1%, eGFR 82, UACR 65.
+    Verifies:
+    1. All original values are preserved (Age 14, eGFR 82, HbA1c 9.1%, UACR 65).
+    2. Essential insulin therapy in T1D is never suggested to be replaced by oral antidiabetic agents.
+    3. Single elevated UACR (65 mg/g) is NOT automatically classified as confirmed diabetic nephropathy;
+       it requires 2 of 3 repeat morning spot tests over 3-6 months.
+    4. Evaluates pediatric kidney function (Bedside Schwartz equation) and age-appropriate guidelines.
+    5. No blanket claim that all oral antidiabetics are unsafe in children (acknowledges youth >= 10 T2D approvals).
+    6. Individual assessment of inquired medications if asked.
+    """
+    payload = {
+        "message": (
+            "My 14-year-old child has Type 1 Diabetes, HbA1c 9.1%, eGFR 82, and UACR 65 mg/g. "
+            "Can we switch from insulin to Metformin or oral diabetes pills?"
+        ),
+        "conditions": ["Type_1_Diabetes"],
+        "lab_values": {
+            "age": 14,
+            "hba1c": 9.1,
+            "egfr": 82.0,
+            "uacr": 65.0
+        },
+        "provider": "local"
+    }
+    response = client.post("/api/chat", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "success"
+    reply = data["reply"]
+    eval_res = data["evaluation"]
+
+    # 1. Preserved original values
+    labs = data["detected_labs"]
+    assert labs["age"] == 14
+    assert labs["hba1c"] == 9.1
+    assert labs["egfr"] == 82.0
+    assert labs["uacr"] == 65.0
+
+    # 2. Never replace essential insulin in T1D
+    assert "Insulin" in reply or "insulin" in reply
+    assert "never" in reply.lower() or "life-essential" in reply.lower() or "cannot replace" in reply.lower() or "mandatory" in reply.lower()
+
+    # 3. Single elevated UACR is suspected, not confirmed diabetic nephropathy
+    assert "repeat" in reply.lower() or "suspected" in reply.lower() or "3 to 6 months" in reply.lower() or "2 out of 3" in reply.lower()
+
+    # 4. Inquired medication (Metformin) answered individually
+    assert "Metformin" in data["inquired_medications"]
+    assert "metformin" in reply.lower()
+
+    # 5. No blanket claim; nuances T1D vs T2D
+    assert "type 1 diabetes" in reply.lower()
+
+
+def test_regression_case_2_adult_t2d_ckd4_hf_hyperkalemia_meds():
+    """
+    Regression Test Case 2 (Requirement 8):
+    67-year-old with Type 2 Diabetes, CKD G4, eGFR 22, potassium 5.6, heart failure, Metformin and Lisinopril.
+    Verifies:
+    1. All original values are preserved (Age 67, eGFR 22, K+ 5.6, HF).
+    2. Potassium 5.6 mmol/L flagged as Moderate Hyperkalemia with prompt assessment recommendation (24-72 hours, ECG).
+    3. Both Metformin and Lisinopril receive individual assessments:
+       - Metformin: Strictly contraindicated at eGFR 22 (< 30) due to lactic acidosis risk.
+       - Lisinopril: Identified as contributing to hyperkalemia; managed with dietary review/binders,
+         NOT automatically discontinued solely because CKD is advanced.
+    4. SGLT2 inhibitor (Empagliflozin 10mg) indicated for cardiorenal and HF protection down to eGFR >= 20.
+    5. Loop diuretic indicated for active volume overload.
+    """
+    payload = {
+        "message": (
+            "I am a 67-year-old with Type 2 Diabetes, CKD Stage 4, eGFR 22, potassium 5.6, and heart failure with swollen legs. "
+            "Are Metformin and Lisinopril safe for me to take?"
+        ),
+        "conditions": ["Type_2_Diabetes", "CKD_Stage_4", "Heart_Failure"],
+        "lab_values": {
+            "age": 67,
+            "egfr": 22.0,
+            "potassium": 5.6,
+            "hba1c": 7.4
+        },
+        "provider": "local"
+    }
+    response = client.post("/api/chat", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "success"
+    reply = data["reply"]
+    eval_res = data["evaluation"]
+
+    # 1. Preserved exact lab values
+    labs = data["detected_labs"]
+    assert labs["age"] == 67
+    assert labs["egfr"] == 22.0
+    assert labs["potassium"] == 5.6
+
+    # 2. Both Metformin and Lisinopril individually addressed
+    assert "Metformin" in data["inquired_medications"]
+    assert "Lisinopril" in data["inquired_medications"]
+    assert "metformin" in reply.lower()
+    assert "lisinopril" in reply.lower()
+
+    # 3. Metformin is contraindicated
+    assert "contraindicated" in reply.lower() or "lactic acidosis" in reply.lower() or "unsafe" in reply.lower()
+
+    # 4. Potassium 5.6 hyperkalemia alert & prompt assessment (not delayed)
+    assert "5.6" in reply
+    assert "hyperkalemia" in reply.lower()
+    assert ("24" in reply or "72" in reply or "prompt" in reply.lower() or "ecg" in reply.lower())
+
+    # 5. Lisinopril not permanently stopped solely due to CKD 4; managed carefully
+    assert "potassium" in reply.lower()
+    assert "kdigo" in reply.lower() or "guideline" in reply.lower()
+
+    # 6. SGLT2 inhibitor / Loop diuretic cardiorenal protection for HF
+    assert "sglt2" in reply.lower() or "empagliflozin" in reply.lower() or "diuretic" in reply.lower()

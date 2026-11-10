@@ -14,6 +14,12 @@ from src.retrieval.hybrid_retriever import HybridClinicalRetriever
 from src.retrieval.pdf_parser import ClinicalPDFParser
 from src.agents.llm_client import LLMClinicalAgent
 from src.agents.workflow import build_safecds_graph
+from src.reasoning.clinical_rules import (
+    extract_inquired_medications,
+    evaluate_individual_medication,
+    evaluate_inquired_medications
+)
+from src.models.patient_context import PatientContext, format_lab_value
 from src.evaluation.run_benchmark import run_cohort_benchmark
 
 ONTOLOGY_PATH = os.path.join("ontologies", "cardiometabolic_core.owl")
@@ -24,7 +30,7 @@ COHORT_PATH = os.path.join("data", "cohort.json")
 app = FastAPI(
     title="SafeCDS: Neuro-Symbolic Agentic RAG Clinical Decision Support",
     description="Locally grounded, formally verified clinical decision support system for cardiometabolic multi-morbidity.",
-    version="2.1.0"
+    version="2.2.0"
 )
 
 # CORS middleware
@@ -47,8 +53,8 @@ safecds_app = build_safecds_graph(verifier, llm_agent=llm_agent, retriever=retri
 class EvaluateRequest(BaseModel):
     patient_id: str = Field(default="PT_CUSTOM")
     patient_name: Optional[str] = Field(default="Anonymous Patient")
-    age: Optional[int] = Field(default=65)
-    gender: Optional[str] = Field(default="Male")
+    age: Optional[int] = Field(default=None)
+    gender: Optional[str] = Field(default=None)
     conditions: List[str] = Field(default_factory=list)
     symptoms: List[str] = Field(default_factory=list)
     lab_values: Optional[Dict[str, Any]] = Field(default_factory=dict)
@@ -199,39 +205,49 @@ def evaluate_patient(req: EvaluateRequest):
 def patient_chat(req: ChatRequest):
     """
     Conversational Patient Assistant endpoint.
-    Extracts clinical signals from natural language query, runs SafeCDS RAG & HermiT verification,
-    and returns an empathetic, plain-language response with full safety provenance.
+    Extracts clinical signals, inquired medications, and lab values from the patient query,
+    preserves original laboratory values without default substitution,
+    executes SafeCDS LangGraph state machine with 8 clinical validation checks,
+    and returns a structured, plain-language response with individual medication safety evaluations.
     """
     # 1. Parse natural text entities
     parsed = pdf_parser.parse_clinical_entities(req.message)
     
     # Merge existing conditions with newly detected conditions
     detected_conds = parsed.get("conditions", []) if isinstance(parsed, dict) else getattr(parsed, "conditions", [])
-    conditions = list(dict.fromkeys(req.conditions + detected_conds))
-    lab_vals = dict(req.lab_values)
-    for k in ["egfr", "sbp", "dbp", "hba1c", "creatinine"]:
-        if parsed.get(k) is not None:
+    conditions = list(dict.fromkeys((req.conditions or []) + detected_conds))
+    
+    # Preserve exact lab values without loss
+    lab_vals = dict(req.lab_values or {})
+    for k in ["egfr", "sbp", "dbp", "hba1c", "creatinine", "potassium", "uacr", "age", "gender"]:
+        if parsed.get(k) is not None and lab_vals.get(k) is None:
             lab_vals[k] = parsed[k]
 
-    # If no conditions were detected, default to conversational response or general advice
-    if not conditions and not lab_vals:
+    # Detect inquired medications
+    inquired_meds = extract_inquired_medications(req.message)
+
+    # If no conditions, labs, or inquired medications detected, return welcoming prompt
+    if not conditions and not lab_vals and not inquired_meds:
         return JSONResponse(content={
             "status": "success",
             "reply": (
                 "Hello! I am your SafeCDS health assistant. I can help evaluate your cardiometabolic symptoms, "
-                "such as Type 2 Diabetes, High Blood Pressure (Hypertension), or Kidney Disease (CKD).\n\n"
-                "Please describe your symptoms, share your lab results (such as eGFR, blood pressure, or HbA1c), "
-                "or click the attach button below to upload a medical report PDF."
+                "such as Type 1 or Type 2 Diabetes, High Blood Pressure (Hypertension), Kidney Disease (CKD), or Heart Failure.\n\n"
+                "Please describe your symptoms, share your lab results (such as eGFR, potassium, blood pressure, or HbA1c), "
+                "or ask about specific medications (such as Metformin, Lisinopril, SGLT2 inhibitors, or Insulin) to review their safety."
             ),
             "verification": None,
             "detected_conditions": [],
             "detected_labs": {}
         })
 
-    # Execute SafeCDS evaluation
+    # Age extraction for patient context
+    age_val = lab_vals.get("age")
+
     eval_req = EvaluateRequest(
         patient_id=req.patient_id or "Patient_User",
         patient_name="Patient",
+        age=age_val,
         conditions=conditions,
         lab_values=lab_vals,
         clinical_narrative=req.message,
@@ -243,29 +259,92 @@ def patient_chat(req: ChatRequest):
     data = json.loads(eval_res.body.decode("utf-8"))
     res = data.get("result", {})
 
-    # Compose conversational patient response
+    # Extract structured fields
     diag = res.get("diagnosed_condition", "Cardiometabolic Health Profile")
     icd = res.get("icd10_code", "")
     med = res.get("recommended_treatment", "Targeted Regimen")
     summary = res.get("patient_friendly_summary", res.get("clinical_rationale", ""))
+    confirmed_dx = res.get("confirmed_diagnoses", [])
+    suspected_conds = res.get("suspected_conditions", [])
+    missing_ev = res.get("missing_evidence", [])
+    med_assessments = res.get("medication_assessments", {})
     warnings = res.get("warnings", [])
     violations = res.get("intercepted_violations", [])
     proof = res.get("verification_details", {})
+    guidelines = res.get("guideline_citations", [])
 
     reply_parts = [
-        f"Based on your clinical details, your health profile is consistent with **{diag}** (ICD-10: `{icd}`).",
+        f"Based on your clinical history and lab results, your profile is consistent with **{diag}** (ICD-10: `{icd}`).",
         "",
-        f"### Safe Recommended Option\n**{med}**",
+        f"### Safe Treatment Consideration (For Physician Review)\n**{med}**",
         f"\n{summary}",
     ]
 
+    # Individual assessment for every medication inquired by the user
+    if inquired_meds:
+        reply_parts.append("\n### Individual Medication Safety Analysis")
+        for drug in inquired_meds:
+            # Find matching evaluation
+            eval_data = None
+            for k, v in med_assessments.items():
+                if k.lower() == drug.lower() or drug.lower() in k.lower():
+                    eval_data = v
+                    break
+            if not eval_data:
+                eval_data = evaluate_individual_medication(drug, {
+                    "age": age_val,
+                    "is_pediatric": (age_val is not None and age_val < 18),
+                    "is_type_1_diabetes": "Type_1_Diabetes" in conditions,
+                    "is_type_2_diabetes": "Type_2_Diabetes" in conditions,
+                    "conditions": conditions,
+                    "lab_values": lab_vals,
+                    "cardiorenal_status": res.get("cardiorenal_status", {}),
+                    "current_medications": lab_vals.get("current_medications", [])
+                })
+            
+            status_badge = "❌ Contraindicated / Unsafe" if eval_data.get("contraindicated") else "✅ Considered Safe / Indicated with Monitoring"
+            reply_parts.append(
+                f"- **{eval_data.get('medication', drug)}** [{status_badge}]: "
+                f"{eval_data.get('safety_verdict', '')}. {eval_data.get('rationale', '')} "
+                f"*(Guideline: {eval_data.get('guideline', 'Clinical Consensus')})*"
+            )
+
+    # Diagnostic Staging: Confirmed vs Suspected
+    if confirmed_dx or suspected_conds:
+        reply_parts.append("\n### Diagnostic Findings & Monitoring Status")
+        if confirmed_dx:
+            reply_parts.append("**Confirmed Diagnoses:**")
+            for c in confirmed_dx:
+                reply_parts.append(f"- {c}")
+        if suspected_conds:
+            reply_parts.append("**Suspected Conditions & Monitoring Alerts:**")
+            for s in suspected_conds:
+                reply_parts.append(f"- {s}")
+
+    # Missing Evidence / Uncertainty
+    if missing_ev:
+        reply_parts.append("\n### Missing Information & Recommended Workup")
+        for m in missing_ev:
+            reply_parts.append(f"- {m}")
+
     all_warnings = warnings + violations
     if all_warnings:
-        reply_parts.append("\n### Safety Precautions & Medications Avoided")
+        reply_parts.append("\n### Clinical Safety Precautions & Intercepted Risks")
         for w in all_warnings:
             reply_parts.append(f"- {w}")
 
-    reply_parts.append("\n*All recommendations are formally verified through the SafeCDS Description Logic Reasoner with a 0.0% contraindication escape rate.*")
+    # Guideline citations
+    if guidelines:
+        reply_parts.append("\n### Authoritative Guideline Citations")
+        for g in guidelines[:3]:
+            reply_parts.append(f"- **{g.get('organization', 'Clinical Guideline')} ({g.get('year', '')})**: {g.get('title', '')}")
+
+    # Scientifically rigorous disclaimer (NO claim of 0% escape rate!)
+    reply_parts.append(
+        "\n*Formal Description Logic verification confirms logical axiomatic consistency against defined OWL safety rules. "
+        "This platform provides evidence-based decision support; final diagnosis, laboratory validation, and prescription decisions "
+        "must be performed by a licensed physician.*"
+    )
 
     return JSONResponse(content={
         "status": "success",
@@ -273,7 +352,9 @@ def patient_chat(req: ChatRequest):
         "evaluation": res,
         "verification": proof,
         "detected_conditions": conditions,
-        "detected_labs": lab_vals
+        "detected_labs": lab_vals,
+        "inquired_medications": inquired_meds,
+        "medication_assessments": med_assessments
     })
 
 
