@@ -1,6 +1,7 @@
 import time
 import re
 import json
+import uuid
 from typing import TypedDict, List, Optional, Dict, Any, Callable, Tuple
 from src.agents.llm_client import LLMClinicalAgent
 from src.retrieval.hybrid_retriever import HybridClinicalRetriever
@@ -21,6 +22,10 @@ from src.models.patient_context import (
     format_lab_value,
     validate_lab_integrity,
     verify_patient_output_consistency
+)
+from src.reasoning.response_validator import (
+    validate_final_clinical_response,
+    sanitize_and_correct_response
 )
 
 # Import LangGraph if available, otherwise provide an exact lightweight state machine
@@ -89,6 +94,7 @@ except ImportError:
 class AgentState(TypedDict):
     patient_id: str
     patient_name: Optional[str]
+    evaluation_id: Optional[str]
     age: Optional[int]
     gender: Optional[str]
     conditions: List[str]
@@ -190,20 +196,28 @@ def ingest_node(state: AgentState):
     symptoms = state.get("symptoms") or labs.get("symptoms", [])
     narrative = state.get("clinical_narrative") or labs.get("clinical_narrative", "")
     
-    # Detect inquired medications from message/narrative/symptoms
-    inquired_meds = extract_inquired_medications(narrative + " " + " ".join(symptoms))
+    # Detect inquired medications from message/narrative/symptoms and current medications
+    curr_meds_list = labs.get("current_medications", [])
+    curr_meds_str = " ".join([str(m) for m in curr_meds_list]) if isinstance(curr_meds_list, list) else str(curr_meds_list)
+    inquired_meds = extract_inquired_medications(narrative + " " + " ".join(symptoms) + " " + curr_meds_str)
+
+    eval_id = state.get("evaluation_id")
+    if not eval_id:
+        eval_id = str(uuid.uuid4())
+        state["evaluation_id"] = eval_id
 
     # Construct single structured PatientContext
     ctx = PatientContext(
         patient_id=pid,
         patient_name=pname,
+        evaluation_id=eval_id,
         age=age,
         gender=gender,
         height_cm=labs.get("height_cm"),
         weight_kg=labs.get("weight_kg"),
         conditions=conds,
         symptoms=symptoms,
-        current_medications=labs.get("current_medications", []),
+        current_medications=curr_meds_list if isinstance(curr_meds_list, list) else [curr_meds_str],
         inquired_medications=inquired_meds,
         lab_values=labs,
         clinical_narrative=narrative
@@ -311,7 +325,8 @@ def generate_hypothesis_node(state: AgentState, llm_agent: LLMClinicalAgent):
         provider=provider,
         model_name=model_name,
         api_key=api_key,
-        lab_values=lab_vals
+        lab_values=lab_vals,
+        evaluation_id=state.get("evaluation_id")
     )
     
     state["proposed_medication"] = response["medication"]
@@ -514,6 +529,31 @@ def validate_clinical_safety_node(state: AgentState):
             "detail": f"Identified {len(missing)} missing clinical parameters requiring workup."
         }
 
+    # 9. Pre-Flight Comprehensive Response Validation (BUG 06)
+    if p_ctx:
+        ctx_obj = PatientContext(
+            patient_id=p_ctx.get("patient_id", state.get("patient_id", "")),
+            patient_name=p_ctx.get("patient_name", state.get("patient_name", "")),
+            evaluation_id=state.get("evaluation_id", ""),
+            age=p_ctx.get("age", state.get("age")),
+            gender=p_ctx.get("gender", state.get("gender")),
+            conditions=p_ctx.get("conditions", state.get("conditions", [])),
+            symptoms=p_ctx.get("symptoms", state.get("symptoms", [])),
+            current_medications=p_ctx.get("current_medications", labs.get("current_medications", [])),
+            inquired_medications=state.get("inquired_medications", []),
+            lab_values=labs,
+            clinical_narrative=state.get("clinical_narrative", "")
+        )
+        is_preflight_valid, preflight_errors = validate_final_clinical_response(ctx_obj, state)
+        if not is_preflight_valid:
+            if "violations" not in state or state["violations"] is None:
+                state["violations"] = []
+            for pfe in preflight_errors:
+                if pfe not in state["violations"]:
+                    state["violations"].append(f"Pre-Flight Validation Violation: {pfe}")
+            sanitized = sanitize_and_correct_response(ctx_obj, state)
+            state.update(sanitized)
+
     state["clinical_safety_validation"] = safety_checks
     
     # Check if any safety check failed that requires fail-closed correction
@@ -563,6 +603,10 @@ def finalize_node(state: AgentState):
         {"status": "APPROVED"}
     )
 
+    p_ctx = state.get("patient_context") or {}
+    labs = state.get("lab_values") or {}
+    is_pediatric_pt = p_ctx.get("is_pediatric", False) or (state.get("age") is not None and state.get("age") < 18)
+
     # Standard guideline citations
     guidelines = [
         {
@@ -580,13 +624,6 @@ def finalize_node(state: AgentState):
             "key_recommendation": "Insulin is life-essential in T1D; SGLT2i and GLP-1 RA prioritize organ protection in T2D."
         },
         {
-            "id": "ISPAD_2024_PEDIATRIC",
-            "title": "ISPAD Clinical Practice Consensus Guidelines 2024: Diabetes in Children and Adolescents",
-            "organization": "ISPAD",
-            "year": 2024,
-            "key_recommendation": "Single elevated UACR does not establish diabetic kidney disease; 2 of 3 repeat tests over 3-6 months required."
-        },
-        {
             "id": "AHA_ACC_HF_2022",
             "title": "AHA/ACC/HFSA 2022 Guideline for the Management of Heart Failure",
             "organization": "AHA/ACC/HFSA",
@@ -594,9 +631,14 @@ def finalize_node(state: AgentState):
             "key_recommendation": "SGLT2 inhibitors and loop diuretics indicated for heart failure and volume overload."
         }
     ]
-
-    p_ctx = state.get("patient_context") or {}
-    labs = state.get("lab_values") or {}
+    if is_pediatric_pt:
+        guidelines.append({
+            "id": "ISPAD_2024_PEDIATRIC",
+            "title": "ISPAD Clinical Practice Consensus Guidelines 2024: Diabetes in Children and Adolescents",
+            "organization": "ISPAD",
+            "year": 2024,
+            "key_recommendation": "Single elevated UACR does not establish diabetic kidney disease; 2 of 3 repeat tests over 3-6 months required."
+        })
 
     state["final_output"] = {
         "status": "APPROVED",
@@ -641,6 +683,23 @@ def finalize_node(state: AgentState):
         "chronological_trace": state.get("chronological_trace", []),
         "intercepted_violations": state.get("violations", [])
     }
+    
+    if p_ctx:
+        ctx_obj = PatientContext(
+            patient_id=p_ctx.get("patient_id", state.get("patient_id", "")),
+            patient_name=p_ctx.get("patient_name", state.get("patient_name", "")),
+            evaluation_id=state.get("evaluation_id", ""),
+            age=p_ctx.get("age", state.get("age")),
+            gender=p_ctx.get("gender", state.get("gender")),
+            conditions=p_ctx.get("conditions", state.get("conditions", [])),
+            symptoms=p_ctx.get("symptoms", state.get("symptoms", [])),
+            current_medications=p_ctx.get("current_medications", labs.get("current_medications", [])),
+            inquired_medications=state.get("inquired_medications", []),
+            lab_values=labs,
+            clinical_narrative=state.get("clinical_narrative", "")
+        )
+        state["final_output"] = sanitize_and_correct_response(ctx_obj, state["final_output"])
+        
     return state
 
 
@@ -651,6 +710,9 @@ def escalate_node(state: AgentState):
         f"Maximum retries exhausted ({state.get('retries')}). Fail-closed escalation for human specialist review.",
         {"status": "ESCALATED"}
     )
+    
+    p_ctx = state.get("patient_context") or {}
+    labs = state.get("lab_values") or {}
     
     state["final_output"] = {
         "status": "ESCALATED_FOR_HUMAN_REVIEW",
@@ -679,6 +741,23 @@ def escalate_node(state: AgentState):
         "chronological_trace": state.get("chronological_trace", []),
         "intercepted_violations": state.get("violations", [])
     }
+    
+    if p_ctx:
+        ctx_obj = PatientContext(
+            patient_id=p_ctx.get("patient_id", state.get("patient_id", "")),
+            patient_name=p_ctx.get("patient_name", state.get("patient_name", "")),
+            evaluation_id=state.get("evaluation_id", ""),
+            age=p_ctx.get("age", state.get("age")),
+            gender=p_ctx.get("gender", state.get("gender")),
+            conditions=p_ctx.get("conditions", state.get("conditions", [])),
+            symptoms=p_ctx.get("symptoms", state.get("symptoms", [])),
+            current_medications=p_ctx.get("current_medications", labs.get("current_medications", [])),
+            inquired_medications=state.get("inquired_medications", []),
+            lab_values=labs,
+            clinical_narrative=state.get("clinical_narrative", "")
+        )
+        state["final_output"] = sanitize_and_correct_response(ctx_obj, state["final_output"])
+        
     return state
 
 

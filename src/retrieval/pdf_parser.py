@@ -77,6 +77,10 @@ class ClinicalPDFParser:
 
         # 3. Age & Gender
         age_match = re.search(r'(?:Age|Age/Sex)[\s:]+(\d{1,3})\s*(?:yo|years|yrs)?', text, re.IGNORECASE)
+        if not age_match:
+            age_match = re.search(r'\b(\d{1,3})\s*(?:-| )(?:year|yr)s?(?:-|\s*)old\b', text, re.IGNORECASE)
+        if not age_match:
+            age_match = re.search(r'\b(\d{1,3})\s*yo\b', text, re.IGNORECASE)
         if age_match:
             try:
                 result["age"] = int(age_match.group(1))
@@ -84,9 +88,11 @@ class ClinicalPDFParser:
                 pass
 
         gender_match = re.search(r'(?:Gender|Sex)[\s:]+(Male|Female|M|F)\b', text, re.IGNORECASE)
+        if not gender_match:
+            gender_match = re.search(r'\b(female|male|woman|man|girl|boy)\b', text, re.IGNORECASE)
         if gender_match:
             g = gender_match.group(1).upper()
-            result["gender"] = "Male" if g in ["M", "MALE"] else "Female"
+            result["gender"] = "Female" if g in ["FEMALE", "WOMAN", "GIRL", "F"] else "Male"
 
         # 4. eGFR (Estimated Glomerular Filtration Rate)
         # Handles: "eGFR: 22.0", "(eGFR): 22", "Estimated GFR: 22", "GFR = 14"

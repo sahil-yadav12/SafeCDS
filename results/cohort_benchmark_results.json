@@ -5,8 +5,8 @@
     "self_correction_rate": 100.0,
     "overall_safe_rate": 100.0,
     "formal_violation_escape_rate": 0.0,
-    "total_violations_intercepted": 1,
-    "execution_time_seconds": 40.95978236198425
+    "total_violations_intercepted": 3,
+    "execution_time_seconds": 47.6359646320343
   },
   "patient_details": [
     {
@@ -73,7 +73,9 @@
       "outcome": "SAFE_FIRST_PASS",
       "attempts": 1,
       "approved_drug": "Comprehensive Lifestyle Optimization",
-      "violations_caught": []
+      "violations_caught": [
+        "Pre-Flight Validation Violation: CKD Staging Error: eGFR 21.0 indicates Stage G4 (ICD-10 N18.4); received Z00.00."
+      ]
     },
     {
       "patient_id": "PT_007",
@@ -84,7 +86,9 @@
       "outcome": "SAFE_FIRST_PASS",
       "attempts": 1,
       "approved_drug": "Pediatric Basal-Bolus Subcutaneous Insulin Regimen",
-      "violations_caught": []
+      "violations_caught": [
+        "Pre-Flight Validation Violation: CKD Staging Error: eGFR 42.0 indicates Stage G3b (ICD-10 N18.32); received E10.21."
+      ]
     },
     {
       "patient_id": "PT_008",
@@ -95,7 +99,7 @@
       ],
       "outcome": "SAFE_FIRST_PASS",
       "attempts": 1,
-      "approved_drug": "Metformin (dose-reduced to 500mg twice daily, max 1000mg/day)",
+      "approved_drug": "Metformin (dose-reduced to 500mg twice daily, max 1000mg/day) & SGLT2 inhibitor (Empagliflozin 10mg daily)",
       "violations_caught": []
     },
     {

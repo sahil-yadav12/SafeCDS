@@ -147,10 +147,10 @@ def classify_albuminuria(
             "clinical_guidance": "Annual screening recommended."
         }
     elif val <= 300.0:
-        if not repeat_confirmed:
+        if not repeat_confirmed and is_pediatric:
             guidance = (
                 f"Single elevated UACR ({val} mg/g) indicates Suspected Microalbuminuria (Stage A2). "
-                "Per ISPAD 2024 and ADA 2024 guidelines, a single test does NOT establish confirmed diabetic nephropathy; "
+                "Per ISPAD 2024 guidelines, a single test does NOT establish confirmed diabetic nephropathy in pediatric patients; "
                 "transient elevations occur with fever, exercise, or posture. "
                 "Mandatory repeat testing: 2 out of 3 first-morning specimens over 3 to 6 months required before confirming diagnosis "
                 "or initiating ACEi/ARB therapy."
@@ -165,14 +165,14 @@ def classify_albuminuria(
             }
         else:
             guidance = (
-                f"Confirmed Persistent Microalbuminuria (Stage A2: {val} mg/g verified across multiple samples). "
-                "Indicates established diabetic kidney disease. Guideline-directed renoprotection indicated "
-                "(ACEi or ARB titration with potassium surveillance)."
+                f"Moderately Increased Albuminuria (Stage A2: {val} mg/g). "
+                "Indicates diabetic kidney disease. Guideline-directed renoprotection indicated "
+                "(ACEi or ARB titration with potassium surveillance per KDIGO 2023)."
             )
             return {
                 "stage_code": "A2",
-                "stage_name": f"Confirmed Albuminuria Stage A2 (Moderately Increased: {val} mg/g)",
-                "category": "Confirmed Persistent Microalbuminuria",
+                "stage_name": f"Albuminuria Stage A2 (Moderately Increased: {val} mg/g)",
+                "category": "Moderately Increased Albuminuria (Microalbuminuria)",
                 "risk_multiplier": "High Cardiorenal Risk",
                 "is_confirmed": True,
                 "clinical_guidance": guidance
@@ -181,12 +181,12 @@ def classify_albuminuria(
         return {
             "stage_code": "A3",
             "stage_name": f"Albuminuria Stage A3 (Severely Increased / Macroalbuminuria: {val} mg/g)",
-            "category": "Macroalbuminuria / Nephrotic Range",
+            "category": "Severely Increased Albuminuria (Macroalbuminuria)",
             "risk_multiplier": "Very High Cardiorenal Risk",
-            "is_confirmed": repeat_confirmed,
+            "is_confirmed": True,
             "clinical_guidance": (
-                f"Severe albuminuria (UACR {val} mg/g). Prompt nephrology evaluation indicated. "
-                "Strong indication for SGLT2 inhibitor (in adults with eGFR >= 20) and maximally tolerated RAAS blockade."
+                f"Severely increased albuminuria (UACR {val} mg/g, Stage A3). "
+                "Strong indication for SGLT2 inhibitor (in adults with eGFR >= 20) and maximally tolerated RAAS blockade (KDIGO 2023 / ADA 2024 Level 1A)."
             )
         }
 
@@ -412,15 +412,16 @@ def evaluate_individual_medication(
             return {
                 "medication": "Metformin",
                 "status": "DOSE_REDUCTION_AND_MONITORING",
-                "safety_verdict": "Eligible with Dose Halving & Close Monitoring",
+                "safety_verdict": "Eligible with Dose Halving to 1000 mg/day Maximum",
                 "contraindicated": False,
                 "rationale": (
-                    f"eGFR is {egfr} mL/min/1.73m² (Stage G3b). Metformin is NOT automatically contraindicated. "
-                    "KDIGO 2023 recommends reducing the maximum daily dose to 1000 mg (e.g. 500 mg twice daily) "
-                    "with eGFR surveillance every 3 months. Do not initiate in treatment-naive patients unless benefit outweighs risk."
+                    f"eGFR is {egfr} mL/min/1.73m² (Stage G3b). Metformin is safe and NOT automatically contraindicated at this level. "
+                    "KDIGO 2023 Practice Guideline 1.3 recommends reducing the maximum daily dose to 1000 mg (e.g. 500 mg twice daily). "
+                    "If patient is currently taking 1000 mg twice daily (2000 mg/day total), the dosage must be reviewed and halved "
+                    "to a maximum of 1000 mg/day, with eGFR monitoring every 3 to 6 months."
                 ),
                 "guideline": "KDIGO 2023 Practice Guideline 1.3 / ADA 2024",
-                "action": "Consult physician for dose reduction to max 1000 mg/day and 3-month renal monitoring."
+                "action": "Metformin dose review: generally 1000 mg/day maximum at this eGFR. Halve dose with 3-6 month renal monitoring."
             }
         elif egfr is not None and egfr >= 45.0:
             return {
@@ -685,13 +686,18 @@ def evaluate_individual_medication(
             }
         else:
             return {
-                "medication": "ACE Inhibitor / ARB (Lisinopril / Losartan)",
-                "status": "STRONGLY_RECOMMENDED",
-                "safety_verdict": "First-Line Recommended for Albuminuria & Hypertension",
+                "medication": "ACE Inhibitor / ARB (Losartan / Lisinopril)",
+                "status": "APPROPRIATE_CONTINUATION_RECOMMENDED",
+                "safety_verdict": "Appropriate for Consideration & Continuation with Monitoring",
                 "contraindicated": False,
-                "rationale": "First-line agent for blood pressure control and renoprotection in patients with albuminuria.",
-                "guideline": "KDIGO 2023 / ACC/AHA 2017 (Level 1A)",
-                "action": "Standard titration to maximum tolerated dose."
+                "rationale": (
+                    "Strongly indicated first-line therapy for renoprotection and blood pressure control "
+                    "in adult diabetic kidney disease with albuminuria (KDIGO 2023 Level 1A / ADA 2024). "
+                    "In patients established on Losartan 50 mg daily with normal serum potassium, continuation is appropriate "
+                    "with routine surveillance of serum creatinine and potassium in 2 to 4 weeks."
+                ),
+                "guideline": "KDIGO 2023 Practice Guideline / ADA 2024 (Level 1A)",
+                "action": "Appropriate for continuation with routine renal function and electrolyte monitoring."
             }
 
     # 6. MINERALOCORTICOID RECEPTOR ANTAGONISTS (Finerenone, Spironolactone)
@@ -873,16 +879,21 @@ def categorize_clinical_diagnoses(
     else:
         missing.append("Baseline renal panel (eGFR & serum creatinine) to determine kidney disease stage")
 
-    # 3. Albuminuria
+    # 3. Albuminuria (Strict Separation of Measured Stage from Repeat Persistence)
     if uacr is not None:
-        alb = classify_albuminuria(uacr, repeat_confirmed=False, is_pediatric=is_pediatric)
-        if alb["is_confirmed"]:
-            confirmed.append(f"{alb['stage_name']}")
+        val = float(uacr)
+        if val > 300.0:
+            confirmed.append(f"Severely Increased Albuminuria (Stage A3: {val} mg/g)")
+        elif val >= 30.0:
+            if is_pediatric:
+                suspected.append(
+                    f"Suspected Microalbuminuria (Stage A2: {val} mg/g) - Requires 2 of 3 repeat tests over 3-6 months to establish confirmed diabetic kidney disease"
+                )
+                missing.append("Repeat morning spot UACR tests (2 of 3 over 3-6 months) for clinical confirmation")
+            else:
+                confirmed.append(f"Moderately Increased Albuminuria (Stage A2: {val} mg/g)")
         else:
-            suspected.append(
-                f"Suspected Microalbuminuria ({uacr} mg/g) - Requires 2 of 3 repeat tests over 3-6 months to establish confirmed diabetic kidney disease"
-            )
-            missing.append("Repeat morning spot UACR tests (2 of 3 over 3-6 months) for clinical confirmation")
+            confirmed.append("Normal Albumin Excretion (Stage A1: < 30 mg/g)")
     else:
         missing.append("Urine Albumin-to-Creatinine Ratio (UACR) test")
 

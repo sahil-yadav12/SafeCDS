@@ -321,3 +321,95 @@ def test_regression_case_2_adult_t2d_ckd4_hf_hyperkalemia_meds():
 
     # 6. SGLT2 inhibitor / Loop diuretic cardiorenal protection for HF
     assert "sglt2" in reply.lower() or "empagliflozin" in reply.lower() or "diuretic" in reply.lower()
+
+
+def test_regression_case_3_pt_chat_003_adult_t2d_ckd3b_a3_losartan_metformin():
+    """
+    Regression Test Case 3 (PT_CHAT_003):
+    56-year-old female with Type 2 Diabetes, eGFR 38, Cr 1.7, HbA1c 8.4, BP 142/86, UACR 560, K+ 4.7.
+    Current Medications: Metformin 1000 mg twice daily, Losartan 50 mg daily.
+    Verifies:
+    1. CKD Stage: G3b (Moderate-to-Severe GFR Reduction), ICD-10 N18.32.
+    2. Albuminuria Stage: A3 (Severely increased albuminuria), NOT microalbuminuria or A2.
+    3. Metformin Assessment: Current dose (1000 mg twice daily = 2000 mg/day) exceeds recommended maximum for CKD G3b.
+       Reduce dose to 500 mg twice daily (maximum 1000 mg/day). Safe to continue at reduced dose; not contraindicated.
+    4. Losartan Assessment: Appropriate for continuation as first-line renal protection in adult T2D with CKD Stage 3b and A3.
+       Monitor serum creatinine and potassium. Do not apply pediatric restrictions.
+    5. SGLT2 Inhibitor Recommendation: Strongly recommended (Empagliflozin 10 mg daily) for kidney and cardiovascular protection.
+    6. Potassium Status: 4.7 mmol/L (Normal / Normokalemia). No hyperkalemia alert, no emergency protocols.
+    7. Zero pediatric rules, zero references to youth diabetes, zero pediatric ACEi/ARB restrictions.
+    8. Context Isolation: No contamination from previous tests (Leo Martinez, David Anderson, etc.).
+    """
+    payload = {
+        "message": (
+            "I am a 56-year-old female with Type 2 Diabetes, eGFR 38 mL/min/1.73m2, serum creatinine 1.7 mg/dL, "
+            "HbA1c 8.4%, blood pressure 142/86 mmHg, UACR 560 mg/g, and serum potassium 4.7 mmol/L. "
+            "My current medications are Metformin 1000 mg twice daily and Losartan 50 mg daily. "
+            "Are my current medications safe with these lab results, and do I need to change anything?"
+        ),
+        "conditions": ["Type_2_Diabetes", "CKD_Stage_3b", "Hypertension"],
+        "lab_values": {
+            "age": 56,
+            "gender": "Female",
+            "egfr": 38.0,
+            "creatinine": 1.7,
+            "hba1c": 8.4,
+            "sbp": 142,
+            "dbp": 86,
+            "uacr": 560.0,
+            "potassium": 4.7,
+            "current_medications": ["Metformin 1000 mg twice daily", "Losartan 50 mg daily"]
+        },
+        "provider": "local"
+    }
+    response = client.post("/api/chat", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "success"
+    reply = data["reply"]
+    eval_res = data["evaluation"]
+
+    # 1. Active patient values preserved canonical
+    labs = data["detected_labs"]
+    assert labs["age"] == 56
+    assert labs["egfr"] == 38.0
+    assert labs["potassium"] == 4.7
+    assert labs["uacr"] == 560.0
+    assert labs["creatinine"] == 1.7
+    assert labs["hba1c"] == 8.4
+
+    # 2. CKD Stage G3b and ICD-10 N18.32
+    assert eval_res["icd10_code"] == "N18.32"
+    assert "Stage 3b" in eval_res["diagnosed_condition"] or "G3b" in eval_res["diagnosed_condition"]
+
+    # 3. Albuminuria Stage A3 (Severely increased), NEVER microalbuminuria or A2
+    assert eval_res.get("albuminuria_stage") == "A3"
+    assert "microalbuminuria" not in reply.lower()
+    assert "a2" not in eval_res.get("albuminuria_stage", "").lower()
+
+    # 4. Potassium 4.7 mmol/L is Normal / Normokalemia (NO false hyperkalemia, NO emergency protocol)
+    assert "10.0" not in reply
+    assert "severe hyperkalemia" not in reply.lower()
+    assert "emergency department" not in reply.lower()
+    assert "telemetry" not in reply.lower()
+    assert eval_res.get("potassium_status") == "NORMOKALEMIA"
+
+    # 5. Metformin: safe at reduced dose, NOT contraindicated, dose review to max 1000 mg/d
+    assert "metformin" in reply.lower()
+    assert "1000" in reply
+    assert ("not contraindicated" in reply.lower() or "safe" in reply.lower() or "not automatically contraindicated" in reply.lower())
+
+    # 6. Losartan: appropriate continuation with monitoring
+    assert "losartan" in reply.lower()
+    assert ("continue" in reply.lower() or "continuation" in reply.lower() or "appropriate" in reply.lower())
+
+    # 7. SGLT2 inhibitor recommended
+    assert "sglt2" in reply.lower() or "empagliflozin" in reply.lower()
+
+    # 8. ABSOLUTELY NO pediatric rule leakage or stale patient leakage
+    forbidden = [
+        "pediatric", "teenager", "child", "ispad", "schwartz",
+        "youth", "adolescent", "leo martinez", "david anderson"
+    ]
+    for term in forbidden:
+        assert term not in reply.lower(), f"Forbidden term '{term}' leaked into adult patient output!"

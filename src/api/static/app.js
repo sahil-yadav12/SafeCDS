@@ -761,7 +761,8 @@ document.addEventListener("DOMContentLoaded", () => {
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
                         message: text,
-                        patient_id: "Patient_Chat",
+                        patient_id: "Patient_Chat_" + Math.random().toString(36).substring(2, 9),
+                        evaluation_id: "eval_" + Math.random().toString(36).substring(2, 11),
                         conditions: chatAttachedContext.conditions,
                         lab_values: chatAttachedContext.lab_values,
                         provider: provider,

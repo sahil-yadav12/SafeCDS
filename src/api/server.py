@@ -2,6 +2,7 @@ import os
 import json
 import time
 import shutil
+import uuid
 from typing import List, Optional, Dict, Any
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.staticfiles import StaticFiles
@@ -53,6 +54,7 @@ safecds_app = build_safecds_graph(verifier, llm_agent=llm_agent, retriever=retri
 class EvaluateRequest(BaseModel):
     patient_id: str = Field(default="PT_CUSTOM")
     patient_name: Optional[str] = Field(default="Anonymous Patient")
+    evaluation_id: Optional[str] = Field(default=None)
     age: Optional[int] = Field(default=None)
     gender: Optional[str] = Field(default=None)
     conditions: List[str] = Field(default_factory=list)
@@ -69,6 +71,7 @@ class ChatRequest(BaseModel):
     message: str
     history: Optional[List[Dict[str, str]]] = Field(default_factory=list)
     patient_id: Optional[str] = Field(default="PT_PATIENT")
+    evaluation_id: Optional[str] = Field(default=None)
     conditions: Optional[List[str]] = Field(default_factory=list)
     lab_values: Optional[Dict[str, Any]] = Field(default_factory=dict)
     provider: Optional[str] = Field(default="local")
@@ -159,9 +162,11 @@ def evaluate_patient(req: EvaluateRequest):
         
     app_instance = build_safecds_graph(verifier, llm_agent=active_agent, retriever=retriever)
     
+    eval_id = req.evaluation_id or f"eval_{uuid.uuid4().hex[:12]}"
     state_input = {
         "patient_id": req.patient_id,
         "patient_name": req.patient_name,
+        "evaluation_id": eval_id,
         "age": req.age,
         "gender": req.gender,
         "conditions": req.conditions,
@@ -223,8 +228,10 @@ def patient_chat(req: ChatRequest):
         if parsed.get(k) is not None and lab_vals.get(k) is None:
             lab_vals[k] = parsed[k]
 
-    # Detect inquired medications
-    inquired_meds = extract_inquired_medications(req.message)
+    # Detect inquired medications from message and current medications
+    curr_meds = lab_vals.get("current_medications", [])
+    curr_meds_text = " ".join([str(m) for m in curr_meds]) if isinstance(curr_meds, list) else str(curr_meds)
+    inquired_meds = extract_inquired_medications(req.message + " " + curr_meds_text)
 
     # If no conditions, labs, or inquired medications detected, return welcoming prompt
     if not conditions and not lab_vals and not inquired_meds:
@@ -243,10 +250,13 @@ def patient_chat(req: ChatRequest):
 
     # Age extraction for patient context
     age_val = lab_vals.get("age")
+    eval_id = req.evaluation_id or f"chat_{uuid.uuid4().hex[:12]}"
+    pid = req.patient_id if req.patient_id and req.patient_id not in ["PT_PATIENT", "PT_CUSTOM"] else f"Patient_{eval_id[:10]}"
 
     eval_req = EvaluateRequest(
-        patient_id=req.patient_id or "Patient_User",
+        patient_id=pid,
         patient_name="Patient",
+        evaluation_id=eval_id,
         age=age_val,
         conditions=conditions,
         lab_values=lab_vals,
@@ -294,8 +304,8 @@ def patient_chat(req: ChatRequest):
                 eval_data = evaluate_individual_medication(drug, {
                     "age": age_val,
                     "is_pediatric": (age_val is not None and age_val < 18),
-                    "is_type_1_diabetes": "Type_1_Diabetes" in conditions,
-                    "is_type_2_diabetes": "Type_2_Diabetes" in conditions,
+                    "is_type_1_diabetes": any("type_1" in c.lower() or "t1d" in c.lower() for c in conditions),
+                    "is_type_2_diabetes": any("type_2" in c.lower() or "t2d" in c.lower() for c in conditions),
                     "conditions": conditions,
                     "lab_values": lab_vals,
                     "cardiorenal_status": res.get("cardiorenal_status", {}),
@@ -333,8 +343,15 @@ def patient_chat(req: ChatRequest):
         for w in all_warnings:
             reply_parts.append(f"- {w}")
 
-    # Guideline citations
+    # Guideline citations (strictly exclude pediatric citations for adult patients)
     if guidelines:
+        if age_val is not None and age_val >= 18:
+            guidelines = [
+                g for g in guidelines
+                if "ispad" not in g.get("id", "").lower()
+                and "child" not in g.get("title", "").lower()
+                and "pediatric" not in g.get("title", "").lower()
+            ]
         reply_parts.append("\n### Authoritative Guideline Citations")
         for g in guidelines[:3]:
             reply_parts.append(f"- **{g.get('organization', 'Clinical Guideline')} ({g.get('year', '')})**: {g.get('title', '')}")

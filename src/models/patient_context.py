@@ -6,6 +6,8 @@ and bidirectional consistency verification between patient inputs and generated 
 
 from typing import Dict, Any, List, Optional, Tuple
 import copy
+import uuid
+import re
 
 
 # Standard Clinical Reference Ranges and Units
@@ -127,6 +129,69 @@ def format_lab_value(val: Any, key: str = "") -> str:
         return f"{val} {unit}".strip()
 
 
+class CanonicalLabData:
+    """
+    Canonical structured laboratory data object.
+    Preserves exact input values and units; missing values are explicitly None.
+    """
+    def __init__(self, raw_labs: Dict[str, Any]):
+        self.egfr: Optional[float] = None
+        self.potassium: Optional[float] = None
+        self.creatinine: Optional[float] = None
+        self.hba1c: Optional[float] = None
+        self.sbp: Optional[int] = None
+        self.dbp: Optional[int] = None
+        self.uacr: Optional[float] = None
+        self.sodium: Optional[float] = None
+        self.bicarbonate: Optional[float] = None
+
+        # Parse and preserve
+        for param in ["egfr", "creatinine", "hba1c", "uacr", "sodium", "bicarbonate"]:
+            val = raw_labs.get(param)
+            if val is None and f"serum_{param}" in raw_labs:
+                val = raw_labs.get(f"serum_{param}")
+            if val is not None and val != "":
+                try:
+                    setattr(self, param, float(val))
+                except (ValueError, TypeError):
+                    pass
+
+        # Potassium
+        k_val = raw_labs.get("potassium")
+        if k_val is None:
+            k_val = raw_labs.get("serum_potassium")
+        if k_val is not None and k_val != "":
+            try:
+                self.potassium = float(k_val)
+            except (ValueError, TypeError):
+                pass
+
+        # Blood pressure
+        if raw_labs.get("sbp") is not None and raw_labs.get("sbp") != "":
+            try:
+                self.sbp = int(float(raw_labs.get("sbp")))
+            except (ValueError, TypeError):
+                pass
+        if raw_labs.get("dbp") is not None and raw_labs.get("dbp") != "":
+            try:
+                self.dbp = int(float(raw_labs.get("dbp")))
+            except (ValueError, TypeError):
+                pass
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "egfr": self.egfr,
+            "potassium": self.potassium,
+            "creatinine": self.creatinine,
+            "hba1c": self.hba1c,
+            "sbp": self.sbp,
+            "dbp": self.dbp,
+            "uacr": self.uacr,
+            "sodium": self.sodium,
+            "bicarbonate": self.bicarbonate
+        }
+
+
 def validate_lab_integrity(raw_labs: Dict[str, Any]) -> Tuple[Dict[str, Any], List[str], List[str]]:
     """
     Validates patient laboratory values:
@@ -142,7 +207,6 @@ def validate_lab_integrity(raw_labs: Dict[str, Any]) -> Tuple[Dict[str, Any], Li
     # Check key lab parameters
     key_params = ["egfr", "potassium", "creatinine", "hba1c", "sbp", "dbp", "uacr"]
     for param in key_params:
-        # Check canonical or alternative key (e.g. serum_potassium)
         val = raw_labs.get(param)
         if val is None and f"serum_{param}" in raw_labs:
             val = raw_labs.get(f"serum_{param}")
@@ -182,6 +246,7 @@ class PatientContext:
     """
     Single structured patient context object representing the complete patient state.
     Preserves original lab inputs throughout the reasoning pipeline.
+    Assigned a unique evaluation_id for complete cross-patient isolation.
     """
     def __init__(
         self,
@@ -196,8 +261,10 @@ class PatientContext:
         current_medications: Optional[List[str]] = None,
         inquired_medications: Optional[List[str]] = None,
         lab_values: Optional[Dict[str, Any]] = None,
-        clinical_narrative: Optional[str] = None
+        clinical_narrative: Optional[str] = None,
+        evaluation_id: Optional[str] = None
     ):
+        self.evaluation_id = evaluation_id or str(uuid.uuid4())
         self.patient_id = patient_id
         self.patient_name = patient_name or "Anonymous Patient"
         self.age = age
@@ -217,6 +284,7 @@ class PatientContext:
         # Validate and preserve labs
         preserved, alerts, missing = validate_lab_integrity(raw_labs)
         self.lab_values = preserved
+        self.canonical_labs = CanonicalLabData(preserved)
         self.integrity_alerts = alerts
         self.missing_labs = missing
 
@@ -224,7 +292,7 @@ class PatientContext:
         self.is_type_1_diabetes = self._determine_t1d()
         self.is_type_2_diabetes = self._determine_t2d()
 
-        # Pediatric classification
+        # Pediatric classification (strictly based on actual patient age)
         self.is_pediatric = (self.age is not None and self.age < 18)
 
     def _determine_t1d(self) -> bool:
@@ -262,6 +330,7 @@ class PatientContext:
     def to_dict(self) -> Dict[str, Any]:
         """Serializes patient context to a dictionary."""
         return {
+            "evaluation_id": self.evaluation_id,
             "patient_id": self.patient_id,
             "patient_name": self.patient_name,
             "age": self.age,
@@ -274,6 +343,7 @@ class PatientContext:
             "inquired_medications": self.inquired_medications,
             "original_lab_values": self.original_lab_values,
             "lab_values": self.lab_values,
+            "canonical_labs": self.canonical_labs.to_dict(),
             "missing_labs": self.missing_labs,
             "integrity_alerts": self.integrity_alerts,
             "is_pediatric": self.is_pediatric,
@@ -294,21 +364,52 @@ def verify_patient_output_consistency(
     3. Verifies that all inquired medications received individual assessment.
     4. Verifies diabetes type compatibility.
     5. Verifies pediatric versus adult guidelines.
+    6. Intercepts false emergency hyperkalemia protocols when potassium is normal.
     """
     inconsistencies: List[str] = []
 
-    # 1. Potassium preservation check
-    orig_k = context.lab_values.get("potassium")
+    # 1. Potassium preservation and hallucination check
+    orig_k = context.canonical_labs.potassium
     if orig_k is not None:
-        reported_k = generated_output.get("potassium_status")
-        # Ensure that if potassium is elevated, output does not describe it as normal
-        if orig_k > 5.0 and reported_k and "NORMOKALEMIA" in reported_k:
+        reported_k = generated_output.get("potassium_status", "")
+        # If potassium <= 5.0 (normokalemia), emergency hyperkalemia MUST NOT be triggered
+        if orig_k <= 5.0:
+            alerts = generated_output.get("clinical_alerts", [])
+            warnings = generated_output.get("warnings", [])
+            all_text = " ".join(alerts + warnings + [generated_output.get("clinical_rationale", ""), generated_output.get("patient_friendly_summary", "")])
+            if "severe hyperkalemia" in all_text.lower() or "emergency department" in all_text.lower() or "10.0" in all_text:
+                inconsistencies.append(
+                    f"CRITICAL LAB HALLUCINATION: Patient potassium is {orig_k} mmol/L (Normal), but response hallucinated severe hyperkalemia or 10.0 mmol/L."
+                )
+            if reported_k and "HYPERKALEMIA" in reported_k:
+                inconsistencies.append(
+                    f"Data Inconsistency: Patient potassium is {orig_k} mmol/L, but output status reported Hyperkalemia."
+                )
+
+    # 2. Adult vs Pediatric Gating check (BUG 01, 04, 05)
+    if not context.is_pediatric and (context.age is not None and context.age >= 18):
+        rat = str(generated_output.get("clinical_rationale", "")).lower()
+        summary = str(generated_output.get("patient_friendly_summary", "")).lower()
+        warns = " ".join(generated_output.get("warnings", [])).lower()
+        combined = f"{rat} {summary} {warns}"
+        if "contraindicated in pediatric" in combined or "pediatric context" in combined or "teenager" in combined or "child" in combined:
             inconsistencies.append(
-                f"Data Inconsistency: Patient potassium is {orig_k} mmol/L, but output status reported Normokalemia."
+                f"Cross-Patient Contamination Error: Adult patient (Age {context.age}) received pediatric medication rules or warnings."
             )
 
-    # 2. eGFR preservation check
-    orig_egfr = context.lab_values.get("egfr")
+    # 3. Albuminuria Classification check (BUG 03)
+    uacr = context.canonical_labs.uacr
+    if uacr is not None and uacr > 300:
+        diag = str(generated_output.get("diagnosed_condition", "")).lower()
+        alb_stage = str(generated_output.get("albuminuria_stage", ""))
+        suspected = " ".join(generated_output.get("suspected_conditions", [])).lower()
+        if alb_stage in ["A1", "A2"] or "microalbuminuria" in diag or "microalbuminuria" in suspected:
+            inconsistencies.append(
+                f"Albuminuria Classification Error: UACR {uacr} mg/g is Stage A3 (Severely Increased); cannot be labeled microalbuminuria or A2."
+            )
+
+    # 4. eGFR preservation check
+    orig_egfr = context.canonical_labs.egfr
     reported_stage = generated_output.get("ckd_stage")
     if orig_egfr is not None and reported_stage:
         if orig_egfr >= 30 and orig_egfr < 45 and reported_stage not in ["G3b", "CKD_Stage_3b"]:
@@ -320,7 +421,7 @@ def verify_patient_output_consistency(
                 f"Staging Inconsistency: Patient eGFR {orig_egfr} requires G4 staging; received {reported_stage}."
             )
 
-    # 3. T1D insulin preservation check
+    # 5. T1D insulin preservation check
     if context.is_type_1_diabetes:
         rec_treatment = str(generated_output.get("recommended_treatment", "")).lower()
         rationale = str(generated_output.get("clinical_rationale", "")).lower()
@@ -330,13 +431,12 @@ def verify_patient_output_consistency(
                 "Critical Safety Inconsistency: Type 1 Diabetes patient cannot have essential insulin therapy replaced or stopped."
             )
 
-    # 4. Inquired medications coverage check
+    # 6. Inquired medications coverage check
     med_assessments = generated_output.get("medication_assessments", {})
     for med in context.inquired_medications:
         med_lower = med.lower()
         found = any(k.lower() == med_lower or med_lower in k.lower() for k in med_assessments.keys())
         if not found:
-            # Check if mentioned in individual answers or rationale
             rat = str(generated_output.get("clinical_rationale", "")).lower()
             if med_lower not in rat:
                 inconsistencies.append(
