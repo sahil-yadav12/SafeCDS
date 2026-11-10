@@ -69,6 +69,44 @@
                 </owl:intersectionOf>
             </owl:Class>
         </owl:equivalentClass>
+        <rdfs:comment>Metformin is contraindicated in advanced CKD due to high risk of fatal lactic acidosis.</rdfs:comment>
+    </owl:Class>
+
+    <!-- Pediatric & Rare Disease Classes -->
+    <owl:Class rdf:about="#PediatricNephropathy">
+        <rdfs:subClassOf rdf:resource="#Condition"/>
+    </owl:Class>
+
+    <owl:Class rdf:about="#Type_1_Diabetes">
+        <rdfs:subClassOf rdf:resource="#Condition"/>
+    </owl:Class>
+
+    <owl:Class rdf:about="#Sulfonylurea">
+        <rdfs:subClassOf rdf:resource="#Medication"/>
+    </owl:Class>
+
+    <owl:Class rdf:about="#SGLT2_Inhibitor">
+        <rdfs:subClassOf rdf:resource="#Medication"/>
+    </owl:Class>
+
+    <!-- Axiom: Unsafe oral hypoglycemic in pediatric nephropathy -->
+    <owl:Class rdf:about="#UnsafePediatricOralHypoglycemicPrescription">
+        <owl:equivalentClass>
+            <owl:Class>
+                <owl:intersectionOf rdf:parseType="Collection">
+                    <rdf:Description rdf:about="#Patient"/>
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="#hasCondition"/>
+                        <owl:someValuesFrom rdf:resource="#PediatricNephropathy"/>
+                    </owl:Restriction>
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="#hasPrescribedDrug"/>
+                        <owl:someValuesFrom rdf:resource="#Metformin"/>
+                    </owl:Restriction>
+                </owl:intersectionOf>
+            </owl:Class>
+        </owl:equivalentClass>
+        <rdfs:comment>Adult oral hypoglycemics are strictly contraindicated in pediatric diabetic nephropathy; basal-bolus insulin is mandated.</rdfs:comment>
     </owl:Class>
 
 </rdf:RDF>

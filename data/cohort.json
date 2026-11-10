@@ -128,5 +128,29 @@
     ],
     "clinical_narrative": "64-year-old female with isolated Stage 4 Chronic Kidney Disease (eGFR 21 mL/min/1.73m2), generalized pruritus, nocturia, and fatigue. Glycemic indices and systemic blood pressure are within acceptable parameters.",
     "expected_drug": "Insulin / Amlodipine"
+  },
+  {
+    "patient_id": "PT_007",
+    "name": "Leo Martinez (Pediatric)",
+    "age": 14,
+    "gender": "Male",
+    "conditions": [
+      "PediatricNephropathy",
+      "Type_1_Diabetes"
+    ],
+    "egfr": 42.0,
+    "sbp": 128,
+    "dbp": 82,
+    "hba1c": 9.4,
+    "creatinine": 1.4,
+    "height_cm": 142.0,
+    "symptoms": [
+      "Persistent microalbuminuria",
+      "Nocturnal enuresis",
+      "Fatigue",
+      "Fluctuating blood glucose"
+    ],
+    "clinical_narrative": "14-year-old adolescent male with early-onset Type 1 Diabetes presenting with persistent microalbuminuria and declining renal function (bedside Schwartz eGFR 42 mL/min/1.73m2). Uncontrolled HbA1c 9.4%. Requires pediatric basal-bolus insulin optimization; all unapproved adult oral agents contraindicated.",
+    "expected_drug": "Pediatric Basal-Bolus Insulin Regimen"
   }
 ]

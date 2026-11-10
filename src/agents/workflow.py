@@ -1,4 +1,6 @@
 import time
+import re
+import json
 from typing import TypedDict, List, Optional, Dict, Any, Callable, Tuple
 from src.agents.llm_client import LLMClinicalAgent
 from src.retrieval.hybrid_retriever import HybridClinicalRetriever
@@ -156,8 +158,12 @@ def retrieve_node(state: AgentState, retriever: HybridClinicalRetriever):
     if state.get("retrieved_context") and state.get("retrieved_passages"):
         return state
 
-    conds_text = ", ".join(state.get("conditions", []))
-    query = f"Management of cardiometabolic patient with {conds_text}"
+    conds_clean = []
+    for c in state.get("conditions", []):
+        expanded = re.sub(r'([a-z])([A-Z])', r'\1 \2', c).replace('_', ' ')
+        conds_clean.append(expanded)
+    conds_text = ", ".join(conds_clean)
+    query = f"Management of patient with {conds_text}"
     
     passages = retriever.retrieve_passages_with_scores(query, top_k=3)
     context_str = retriever.retrieve_context(query, top_k=3)

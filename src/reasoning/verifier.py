@@ -40,6 +40,12 @@ class ClinicalVerifier:
         "t2d": "Type_2_Diabetes",
         "t2dm": "Type_2_Diabetes",
         "diabetes": "Type_2_Diabetes",
+        "type_1_diabetes": "Type_1_Diabetes",
+        "type_i_diabetes": "Type_1_Diabetes",
+        "t1d": "Type_1_Diabetes",
+        "pediatricnephropathy": "PediatricNephropathy",
+        "pediatric_nephropathy": "PediatricNephropathy",
+        "pediatric_ckd": "PediatricNephropathy",
         "hypertension": "Hypertension",
         "high_blood_pressure": "Hypertension",
         "htn": "Hypertension",
@@ -52,7 +58,12 @@ class ClinicalVerifier:
         "lisinopril": "Lisinopril",
         "insulin": "Insulin",
         "amlodipine": "Amlodipine",
-        "losartan": "Losartan"
+        "losartan": "Losartan",
+        "sulfonylurea": "Sulfonylurea",
+        "sglt2_inhibitor": "SGLT2_Inhibitor",
+        "glipizide": "Sulfonylurea",
+        "empagliflozin": "SGLT2_Inhibitor",
+        "pediatric_insulin": "Insulin"
     }
 
     def __init__(self, ontology_path: str, use_hermit: bool = False, enable_cache: bool = True, **kwargs):
@@ -67,8 +78,14 @@ class ClinicalVerifier:
         
         # Parse axioms from OWL file once at initialization
         self.axioms: List[Dict[str, str]] = []
-        self.known_meds: List[str] = ["Metformin", "Lisinopril", "Insulin", "Amlodipine", "Losartan"]
-        self.known_conds: List[str] = ["CKD_Stage_4_5", "Type_2_Diabetes", "Hypertension", "Heart_Failure"]
+        self.known_meds: List[str] = [
+            "Metformin", "Lisinopril", "Insulin", "Amlodipine", "Losartan",
+            "Sulfonylurea", "SGLT2_Inhibitor"
+        ]
+        self.known_conds: List[str] = [
+            "CKD_Stage_4_5", "Type_2_Diabetes", "Hypertension", "Heart_Failure",
+            "PediatricNephropathy", "Type_1_Diabetes"
+        ]
         self._load_and_parse_ontology()
 
     def _load_and_parse_ontology(self):
@@ -169,6 +186,16 @@ class ClinicalVerifier:
                 
         return None
 
+    @staticmethod
+    def calculate_pediatric_egfr(height_cm: float, creatinine_mg_dl: float) -> float:
+        """
+        Calculates pediatric bedside Schwartz estimated GFR:
+        eGFR = 0.413 * Height (cm) / Serum Creatinine (mg/dL)
+        """
+        if creatinine_mg_dl <= 0:
+            return 90.0
+        return round((0.413 * height_cm) / creatinine_mg_dl, 1)
+
     def _run_axiomatic_verification(self, matched_conditions: Set[str], matched_medications: Set[str]) -> List[str]:
         """High-speed axiomatic rule evaluation (microseconds execution time)."""
         violations = []
@@ -178,6 +205,8 @@ class ClinicalVerifier:
                     violations.append("Contraindication: Metformin is contraindicated in CKD_Stage_4_5 (Risk of Lactic Acidosis).")
                 elif axiom["class_name"] == "UnsafeACEiPrescription":
                     violations.append("Contraindication: High-dose ACE-inhibitors (Lisinopril) are contraindicated in advanced CKD_Stage_4_5 without close monitoring (Risk of severe hyperkalemia / acute renal decline).")
+                elif axiom["class_name"] == "UnsafePediatricOralHypoglycemicPrescription":
+                    violations.append("Contraindication: Adult oral hypoglycemic agents are strictly contraindicated in pediatric diabetic nephropathy; intensive basal-bolus insulin is mandated (ISPAD 2024 / KDIGO Pediatric).")
                 else:
                     violations.append(axiom["description"])
         return violations

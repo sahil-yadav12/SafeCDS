@@ -1,12 +1,12 @@
 {
   "metrics": {
-    "total_patients": 6,
-    "first_pass_rate": 83.33333333333334,
+    "total_patients": 7,
+    "first_pass_rate": 85.71428571428571,
     "self_correction_rate": 100.0,
     "overall_safe_rate": 100.0,
     "formal_violation_escape_rate": 0.0,
     "total_violations_intercepted": 1,
-    "execution_time_seconds": 28.57491707801819
+    "execution_time_seconds": 32.72511434555054
   },
   "patient_details": [
     {
@@ -73,6 +73,17 @@
       "outcome": "SAFE_FIRST_PASS",
       "attempts": 1,
       "approved_drug": "Insulin",
+      "violations_caught": []
+    },
+    {
+      "patient_id": "PT_007",
+      "conditions": [
+        "PediatricNephropathy",
+        "Type_1_Diabetes"
+      ],
+      "outcome": "SAFE_FIRST_PASS",
+      "attempts": 1,
+      "approved_drug": "Pediatric Basal-Bolus Insulin Regimen",
       "violations_caught": []
     }
   ]

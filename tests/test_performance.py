@@ -41,6 +41,15 @@ def test_verifier_clinical_rules():
     res_dm = verifier.verify_prescription("P5", ["Type_2_Diabetes"], ["Metformin"])
     assert res_dm["status"] == "PASS"
 
+    # 6. Pediatric Nephropathy + Metformin must fail
+    res_peds_fail = verifier.verify_prescription("P6", ["PediatricNephropathy"], ["Metformin"])
+    assert res_peds_fail["status"] == "FAIL"
+    assert "pediatric" in res_peds_fail["violated_axiom"].lower()
+
+    # 7. Pediatric Nephropathy + Insulin must pass
+    res_peds_pass = verifier.verify_prescription("P7", ["PediatricNephropathy"], ["Pediatric Basal-Bolus Insulin Regimen"])
+    assert res_peds_pass["status"] == "PASS"
+
 
 def test_verifier_caching_performance():
     ontology_path = os.path.join("ontologies", "cardiometabolic_core.owl")

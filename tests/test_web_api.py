@@ -109,3 +109,29 @@ def test_patient_chat_endpoint():
     assert "reply" in data
     assert "Insulin" in data["reply"] or "Metformin avoided" in data["reply"]
     assert "CKD_Stage_4_5" in data["detected_conditions"]
+
+def test_evaluate_pediatric_patient_pt007():
+    payload = {
+        "patient_id": "PT_007",
+        "patient_name": "Leo Martinez",
+        "age": 14,
+        "gender": "Male",
+        "conditions": ["PediatricNephropathy", "Type_1_Diabetes"],
+        "lab_values": {
+            "egfr": 42.0,
+            "sbp": 128,
+            "dbp": 82,
+            "hba1c": 9.4,
+            "creatinine": 1.4
+        },
+        "clinical_narrative": "14-year-old adolescent with early diabetic nephropathy and Type 1 Diabetes.",
+        "provider": "local"
+    }
+    response = client.post("/api/evaluate", json=payload)
+    assert response.status_code == 200
+    res = response.json()["result"]
+    assert res["status"] == "APPROVED"
+    assert "Insulin" in res["recommended_treatment"]
+    assert res["icd10_code"] == "E10.21"
+    assert res["verification_details"]["status"] == "PASS"
+

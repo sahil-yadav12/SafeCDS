@@ -21,8 +21,10 @@ except ImportError:
 
 
 def _tokenize(text: str) -> List[str]:
-    """Clean alphanumeric tokenization without punctuation artifacts."""
-    return re.findall(r'[a-zA-Z0-9_\-]+', text.lower())
+    """Clean alphanumeric tokenization without punctuation artifacts, splitting camelCase and snake_case."""
+    text_expanded = re.sub(r'([a-z])([A-Z])', r'\1 \2', text)
+    text_expanded = text_expanded.replace('_', ' ')
+    return re.findall(r'[a-zA-Z0-9]+', text_expanded.lower())
 
 
 class SimpleBM25Fallback:

@@ -1,8 +1,9 @@
-// SafeCDS Frontend Controller (Cursor Warm-Parchment & Editorial UI)
+// SafeCDS Frontend Controller — Adaptive ElevenLabs Light & Linear Dark System
 document.addEventListener("DOMContentLoaded", () => {
     // State
     let currentCohort = [];
     let activeView = localStorage.getItem("safecds_view") || "clinician"; // "clinician" | "patient"
+    let currentTheme = localStorage.getItem("safecds_theme") || "light"; // "light" | "dark"
     let chatHistory = [];
     let chatAttachedContext = { conditions: [], lab_values: {}, filename: null };
     let apiKeys = {
@@ -10,7 +11,11 @@ document.addEventListener("DOMContentLoaded", () => {
         openai: localStorage.getItem("safecds_openai_key") || ""
     };
 
-    // DOM Elements - Navigation & Modes
+    // DOM Elements - Theme & Modes
+    const btnThemeToggle = document.getElementById("btn-theme-toggle");
+    const themeIcon = document.getElementById("theme-icon");
+    const themeLabel = document.getElementById("theme-label");
+
     const btnViewClinician = document.getElementById("btn-view-clinician");
     const btnViewPatient = document.getElementById("btn-view-patient");
     const viewClinician = document.getElementById("view-clinician");
@@ -33,19 +38,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnEvaluate = document.getElementById("btn-evaluate");
     const inputEgfr = document.getElementById("input-egfr");
     const labelEgfrStage = document.getElementById("label-egfr-stage");
+    const patientAgeInput = document.getElementById("patient-age");
     const resultsWelcome = document.getElementById("results-welcome");
     const resultsPanel = document.getElementById("results-panel");
     const navTabs = document.querySelectorAll(".nav-tab");
     const tabContents = document.querySelectorAll(".tab-content");
-
-    const stepChips = [
-        document.getElementById("step-1"),
-        document.getElementById("step-2"),
-        document.getElementById("step-3"),
-        document.getElementById("step-4"),
-        document.getElementById("step-5"),
-        document.getElementById("step-6")
-    ];
 
     // Patient Chat Elements
     const chatMessages = document.getElementById("chat-messages");
@@ -59,7 +56,35 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnRemoveChatFile = document.getElementById("btn-remove-chat-file");
 
     // ========================================================
-    // 1. VIEW SWITCHER (CLINICIAN WORKBENCH VS PATIENT CHAT)
+    // 1. THEME CONTROLLER (ELEVENLABS LIGHT VS LINEAR DARK)
+    // ========================================================
+    function applyTheme(theme) {
+        currentTheme = theme;
+        localStorage.setItem("safecds_theme", theme);
+
+        if (theme === "dark") {
+            document.body.classList.remove("theme-light");
+            document.body.classList.add("theme-dark");
+            if (themeIcon) themeIcon.textContent = "🌙";
+            if (themeLabel) themeLabel.textContent = "Dark";
+        } else {
+            document.body.classList.remove("theme-dark");
+            document.body.classList.add("theme-light");
+            if (themeIcon) themeIcon.textContent = "☀️";
+            if (themeLabel) themeLabel.textContent = "Light";
+        }
+    }
+
+    if (btnThemeToggle) {
+        btnThemeToggle.addEventListener("click", () => {
+            const nextTheme = currentTheme === "light" ? "dark" : "light";
+            applyTheme(nextTheme);
+        });
+    }
+    applyTheme(currentTheme);
+
+    // ========================================================
+    // 2. VIEW SWITCHER (CLINICIAN WORKBENCH VS PATIENT CHAT)
     // ========================================================
     function switchView(view) {
         activeView = view;
@@ -70,7 +95,7 @@ document.addEventListener("DOMContentLoaded", () => {
             btnViewClinician.classList.remove("active");
             viewClinician.classList.add("hidden");
             viewPatient.classList.remove("hidden");
-            chatInput.focus();
+            if (chatInput) chatInput.focus();
         } else {
             btnViewClinician.classList.add("active");
             btnViewPatient.classList.remove("active");
@@ -79,9 +104,11 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    btnViewClinician.addEventListener("click", () => switchView("clinician"));
-    btnViewPatient.addEventListener("click", () => switchView("patient"));
-    switchView(activeView);
+    if (btnViewClinician && btnViewPatient) {
+        btnViewClinician.addEventListener("click", () => switchView("clinician"));
+        btnViewPatient.addEventListener("click", () => switchView("patient"));
+        switchView(activeView);
+    }
 
     // Print
     if (btnPrint) {
@@ -89,22 +116,24 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // API Key Modal
-    btnApiKey.addEventListener("click", () => {
-        inputGeminiKey.value = apiKeys.gemini;
-        inputOpenaiKey.value = apiKeys.openai;
-        modalApiKeys.classList.remove("hidden");
-    });
-    btnCloseModal.addEventListener("click", () => modalApiKeys.classList.add("hidden"));
-    btnSaveKeys.addEventListener("click", () => {
-        apiKeys.gemini = inputGeminiKey.value.trim();
-        apiKeys.openai = inputOpenaiKey.value.trim();
-        localStorage.setItem("safecds_gemini_key", apiKeys.gemini);
-        localStorage.setItem("safecds_openai_key", apiKeys.openai);
-        modalApiKeys.classList.add("hidden");
-    });
+    if (btnApiKey && modalApiKeys) {
+        btnApiKey.addEventListener("click", () => {
+            inputGeminiKey.value = apiKeys.gemini;
+            inputOpenaiKey.value = apiKeys.openai;
+            modalApiKeys.classList.remove("hidden");
+        });
+        btnCloseModal.addEventListener("click", () => modalApiKeys.classList.add("hidden"));
+        btnSaveKeys.addEventListener("click", () => {
+            apiKeys.gemini = inputGeminiKey.value.trim();
+            apiKeys.openai = inputOpenaiKey.value.trim();
+            localStorage.setItem("safecds_gemini_key", apiKeys.gemini);
+            localStorage.setItem("safecds_openai_key", apiKeys.openai);
+            modalApiKeys.classList.add("hidden");
+        });
+    }
 
     // ========================================================
-    // 2. CLINICIAN WORKBENCH CONTROLLER
+    // 3. CLINICIAN TABS NAVIGATION
     // ========================================================
     navTabs.forEach(tab => {
         tab.addEventListener("click", () => {
@@ -122,116 +151,134 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             });
 
-            if (targetId === "tab-benchmark") loadBenchmarkData();
-            if (targetId === "tab-axioms") loadOntologyAxioms();
-            if (targetId === "tab-guidelines") loadGuidelinesData();
+            if (targetId === "tab-benchmark") loadBenchmarkTab();
+            if (targetId === "tab-axioms") loadAxiomsTab();
+            if (targetId === "tab-guidelines") loadGuidelinesTab();
         });
     });
 
+    // ========================================================
+    // 4. eGFR STAGING & PEDIATRIC FORMULA LOGIC
+    // ========================================================
     function updateEgfrLabel(val) {
-        let stageText = "";
-        if (val < 15) {
-            stageText = "Stage 5: Kidney Failure (< 15)";
-        } else if (val <= 29) {
-            stageText = "Stage 4: Severely Decreased (15-29)";
-        } else if (val <= 44) {
-            stageText = "Stage 3b: Moderate-Severe (30-44)";
-        } else if (val <= 59) {
-            stageText = "Stage 3a: Mild-Moderate (45-59)";
+        const egfr = parseFloat(val);
+        const age = parseInt(patientAgeInput.value) || 65;
+        let desc = "";
+
+        if (age < 18) {
+            if (egfr >= 90) desc = `${egfr} (Pediatric Normal)`;
+            else if (egfr >= 60) desc = `${egfr} (Pediatric Mild Reduction)`;
+            else if (egfr >= 30) desc = `${egfr} (Pediatric Moderate Nephropathy)`;
+            else desc = `${egfr} (Pediatric Severe Kidney Impairment)`;
         } else {
-            stageText = "Preserved Renal Function (≥ 60)";
+            if (egfr >= 90) desc = `${egfr} (Normal / Stage 1)`;
+            else if (egfr >= 60) desc = `${egfr} (Mild / Stage 2)`;
+            else if (egfr >= 45) desc = `${egfr} (Moderate / Stage 3a)`;
+            else if (egfr >= 30) desc = `${egfr} (Moderate-Severe / Stage 3b)`;
+            else if (egfr >= 15) desc = `${egfr} (Severely Decreased / Stage 4)`;
+            else desc = `${egfr} (Kidney Failure / Stage 5)`;
         }
-        labelEgfrStage.textContent = `${val.toFixed(1)} (${stageText})`;
+        if (labelEgfrStage) labelEgfrStage.textContent = desc;
     }
 
-    inputEgfr.addEventListener("input", (e) => {
-        updateEgfrLabel(parseFloat(e.target.value));
-    });
+    if (inputEgfr) {
+        inputEgfr.addEventListener("input", (e) => updateEgfrLabel(e.target.value));
+        patientAgeInput.addEventListener("input", () => updateEgfrLabel(inputEgfr.value));
+    }
 
-    async function loadCohort() {
+    // ========================================================
+    // 5. COHORT PRESETS LOADING (ADULT + PEDIATRICS)
+    // ========================================================
+    async function fetchCohort() {
         try {
             const res = await fetch("/api/cohort");
-            currentCohort = await res.json();
-            renderCohortButtons();
+            const data = await res.json();
+            currentCohort = Array.isArray(data) ? data : (data.cohort || []);
+            renderCohortButtons(currentCohort);
             if (currentCohort.length > 0) {
-                populatePatient(currentCohort[0]);
+                populateIntakeForm(currentCohort[0]);
             }
         } catch (err) {
-            console.error("Failed to load cohort:", err);
+            console.error("Failed to fetch cohort:", err);
         }
     }
 
-    function renderCohortButtons() {
+    function renderCohortButtons(cohort) {
+        if (!cohortButtonsContainer) return;
         cohortButtonsContainer.innerHTML = "";
-        currentCohort.forEach((pt, index) => {
+
+        cohort.forEach(patient => {
             const btn = document.createElement("button");
             btn.type = "button";
-            btn.className = `p-2 bg-[#f7f7f4] border border-[#cdcdc9] hover:border-[#26251e] transition text-left ${index === 0 ? 'border-[#26251e]' : ''}`;
-            
-            const condSummary = pt.conditions.map(c => {
-                if (c.includes("CKD")) return "CKD 4/5";
-                if (c.includes("Diabetes")) return "T2DM";
-                if (c.includes("Hypertension")) return "HTN";
-                return c;
-            }).join(" + ");
+            btn.className = "cohort-pill-btn";
+            btn.dataset.patientId = patient.patient_id;
+
+            const isPeds = (patient.age && patient.age < 18) || patient.patient_id.includes("007") || patient.name.includes("Pediatric");
+            const labelText = isPeds ? `${patient.patient_id} (Peds)` : patient.patient_id;
 
             btn.innerHTML = `
-                <div class="text-[11px] font-mono text-[#26251e] flex items-center justify-between">
-                    <span>${pt.patient_id}</span>
-                    <span class="text-[10px] text-[#84847e]">${pt.age}y</span>
-                </div>
-                <div class="text-[10px] text-[#7a7974] truncate mt-0.5">${condSummary}</div>
+                <span>${labelText}</span>
+                <span class="w-2 h-2 rounded-full ${isPeds ? 'bg-[var(--accent-spark)]' : 'bg-[var(--color-text-muted)]'}"></span>
             `;
 
             btn.addEventListener("click", () => {
-                document.querySelectorAll("#cohort-buttons button").forEach(b => b.classList.remove("border-[#26251e]"));
-                btn.classList.add("border-[#26251e]");
-                populatePatient(pt);
+                document.querySelectorAll(".cohort-pill-btn").forEach(b => b.classList.remove("active"));
+                btn.classList.add("active");
+                populateIntakeForm(patient);
             });
 
             cohortButtonsContainer.appendChild(btn);
         });
+
+        // Select first preset by default
+        if (cohortButtonsContainer.firstChild) {
+            cohortButtonsContainer.firstChild.classList.add("active");
+        }
     }
 
-    function populatePatient(pt) {
-        document.getElementById("patient-id").value = pt.patient_id || "PT_CUSTOM";
-        document.getElementById("patient-name").value = pt.name || "Anonymous Patient";
-        document.getElementById("patient-age").value = pt.age || 65;
-        document.getElementById("patient-gender").value = pt.gender || "Male";
-        document.getElementById("intake-badge").textContent = pt.patient_id || "PT_CUSTOM";
+    function populateIntakeForm(patient) {
+        document.getElementById("patient-id").value = patient.patient_id;
+        document.getElementById("patient-name").value = patient.name;
+        document.getElementById("patient-age").value = patient.age;
+        document.getElementById("patient-gender").value = patient.gender;
+        document.getElementById("intake-badge").textContent = patient.patient_id;
 
+        inputEgfr.value = patient.egfr;
+        updateEgfrLabel(patient.egfr);
+
+        document.getElementById("input-sbp").value = patient.sbp;
+        document.getElementById("input-dbp").value = patient.dbp;
+        document.getElementById("input-hba1c").value = patient.hba1c;
+        document.getElementById("input-creatinine").value = patient.creatinine;
+        document.getElementById("clinical-narrative").value = patient.clinical_narrative;
+
+        // Check matching condition boxes
         document.querySelectorAll(".condition-checkbox").forEach(cb => {
-            cb.checked = (pt.conditions || []).includes(cb.value);
+            cb.checked = patient.conditions.includes(cb.value);
         });
-
-        const egfrVal = pt.egfr !== undefined ? pt.egfr : 60;
-        inputEgfr.value = egfrVal;
-        updateEgfrLabel(egfrVal);
-
-        document.getElementById("input-sbp").value = pt.sbp || 120;
-        document.getElementById("input-dbp").value = pt.dbp || 80;
-        document.getElementById("input-hba1c").value = pt.hba1c || 5.7;
-        document.getElementById("input-creatinine").value = pt.creatinine || 1.0;
-        document.getElementById("clinical-narrative").value = pt.clinical_narrative || "";
     }
 
-    // PDF Upload Handlers
-    pdfDropzone.addEventListener("click", () => pdfFileInput.click());
-    pdfDropzone.addEventListener("dragover", (e) => {
-        e.preventDefault();
-        pdfDropzone.style.borderColor = "var(--color-ink)";
-    });
-    pdfDropzone.addEventListener("dragleave", () => {
-        pdfDropzone.style.borderColor = "var(--color-stone)";
-    });
-    pdfDropzone.addEventListener("drop", (e) => {
-        e.preventDefault();
-        pdfDropzone.style.borderColor = "var(--color-stone)";
-        if (e.dataTransfer.files.length > 0) handlePdfUpload(e.dataTransfer.files[0]);
-    });
-    pdfFileInput.addEventListener("change", (e) => {
-        if (e.target.files.length > 0) handlePdfUpload(e.target.files[0]);
-    });
+    // ========================================================
+    // 6. PDF DRAG-AND-DROP & UPLOAD
+    // ========================================================
+    if (pdfDropzone && pdfFileInput) {
+        pdfDropzone.addEventListener("click", () => pdfFileInput.click());
+        pdfDropzone.addEventListener("dragover", (e) => {
+            e.preventDefault();
+            pdfDropzone.style.borderColor = "var(--color-border-hover)";
+        });
+        pdfDropzone.addEventListener("dragleave", () => {
+            pdfDropzone.style.borderColor = "var(--color-border)";
+        });
+        pdfDropzone.addEventListener("drop", (e) => {
+            e.preventDefault();
+            pdfDropzone.style.borderColor = "var(--color-border)";
+            if (e.dataTransfer.files.length > 0) handlePdfUpload(e.dataTransfer.files[0]);
+        });
+        pdfFileInput.addEventListener("change", (e) => {
+            if (e.target.files.length > 0) handlePdfUpload(e.target.files[0]);
+        });
+    }
 
     document.querySelectorAll(".btn-sample-pdf").forEach(btn => {
         btn.addEventListener("click", async (e) => {
@@ -243,7 +290,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 const file = new File([blob], fileName, { type: "application/pdf" });
                 handlePdfUpload(file);
             } catch (err) {
-                console.error("Failed to load sample:", err);
+                console.error("Failed to load sample report:", err);
             }
         });
     });
@@ -252,7 +299,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const formData = new FormData();
         formData.append("file", file);
 
-        pdfDropzone.innerHTML = `<span class="text-xs text-[#84847e]">Extracting entities from ${file.name}...</span>`;
+        pdfDropzone.innerHTML = `<span class="text-xs text-[var(--color-text-muted)]">Extracting clinical entities from ${file.name}...</span>`;
 
         try {
             const res = await fetch("/api/upload-pdf", {
@@ -264,13 +311,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 const parsed = data.data;
                 populateFromPdf(parsed);
                 pdfDropzone.innerHTML = `
-                    <div class="text-xs text-[#34785c] font-medium">${file.name} parsed successfully</div>
-                    <span class="text-[11px] text-[#84847e]">eGFR ${parsed.egfr || '-'}, BP ${parsed.sbp || '-'}/${parsed.dbp || '-'}, HbA1c ${parsed.hba1c || '-'}%</span>
+                    <div class="text-xs text-[var(--status-verified-text)] font-medium">${file.name} parsed successfully</div>
+                    <span class="text-[11px] text-[var(--color-text-muted)]">eGFR ${parsed.egfr || '-'}, BP ${parsed.sbp || '-'}/${parsed.dbp || '-'}, HbA1c ${parsed.hba1c || '-'}%</span>
                 `;
             }
         } catch (err) {
             console.error("PDF upload error:", err);
-            pdfDropzone.innerHTML = `<span class="text-xs text-[#cf2d56]">Error parsing PDF</span>`;
+            pdfDropzone.innerHTML = `<span class="text-xs text-[var(--status-contraindicated-text)]">Error parsing PDF</span>`;
         }
     }
 
@@ -306,418 +353,425 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("clinical-narrative").value = narrative.trim();
     }
 
-    function resetStepper() {
-        stepChips.forEach((chip) => {
-            chip.className = "step-chip";
+    // ========================================================
+    // 7. CLINICIAN EVALUATION EXECUTION
+    // ========================================================
+    if (intakeForm) {
+        intakeForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+
+            const selectedConditions = Array.from(document.querySelectorAll(".condition-checkbox:checked")).map(cb => cb.value);
+            const provider = providerSelect.value;
+            const apiKey = provider === "gemini" ? apiKeys.gemini : (provider === "openai" ? apiKeys.openai : "");
+
+            const payload = {
+                patient_id: document.getElementById("patient-id").value.trim(),
+                patient_name: document.getElementById("patient-name").value.trim(),
+                age: parseInt(document.getElementById("patient-age").value) || 65,
+                gender: document.getElementById("patient-gender").value,
+                conditions: selectedConditions,
+                lab_values: {
+                    egfr: parseFloat(inputEgfr.value),
+                    sbp: parseInt(document.getElementById("input-sbp").value) || 120,
+                    dbp: parseInt(document.getElementById("input-dbp").value) || 80,
+                    hba1c: parseFloat(document.getElementById("input-hba1c").value) || 5.7,
+                    creatinine: parseFloat(document.getElementById("input-creatinine").value) || 1.0
+                },
+                clinical_narrative: document.getElementById("clinical-narrative").value.trim(),
+                provider: provider,
+                api_key: apiKey
+            };
+
+            btnEvaluate.disabled = true;
+            btnEvaluate.innerHTML = `<span>Evaluating Case...</span>`;
+
+            try {
+                const response = await fetch("/api/evaluate", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+                const data = await response.json();
+                if (data.status === "success") {
+                    displayClinicianResults(data.result, payload);
+                }
+            } catch (err) {
+                console.error("Evaluation error:", err);
+            } finally {
+                btnEvaluate.disabled = false;
+                btnEvaluate.innerHTML = `<span>Run Clinical Evaluation</span> <span>→</span>`;
+            }
         });
     }
 
-    function setStepState(stepIdx, state) {
-        const chip = stepChips[stepIdx];
-        if (!chip) return;
-        chip.className = `step-chip ${state}`;
-    }
+    // Render the high-visibility, pure clinical report
+    function displayClinicianResults(res, intakePayload) {
+        if (!resultsWelcome || !resultsPanel) return;
 
-    // Clinician Form Submission
-    intakeForm.addEventListener("submit", async (e) => {
-        e.preventDefault();
-
-        const selectedConditions = Array.from(document.querySelectorAll(".condition-checkbox:checked")).map(cb => cb.value);
-        const provider = providerSelect.value;
-        const apiKey = provider === "gemini" ? apiKeys.gemini : (provider === "openai" ? apiKeys.openai : "");
-
-        const payload = {
-            patient_id: document.getElementById("patient-id").value.trim(),
-            patient_name: document.getElementById("patient-name").value.trim(),
-            age: parseInt(document.getElementById("patient-age").value) || 65,
-            gender: document.getElementById("patient-gender").value,
-            conditions: selectedConditions,
-            lab_values: {
-                egfr: parseFloat(inputEgfr.value),
-                sbp: parseInt(document.getElementById("input-sbp").value) || 120,
-                dbp: parseInt(document.getElementById("input-dbp").value) || 80,
-                hba1c: parseFloat(document.getElementById("input-hba1c").value) || 5.7,
-                creatinine: parseFloat(document.getElementById("input-creatinine").value) || 1.0
-            },
-            clinical_narrative: document.getElementById("clinical-narrative").value.trim(),
-            provider: provider,
-            api_key: apiKey
-        };
-
-        btnEvaluate.disabled = true;
-        btnEvaluate.innerHTML = `<span>Evaluating...</span>`;
-        resetStepper();
-        setStepState(0, "active");
-
-        setTimeout(() => setStepState(0, "completed"), 100);
-        setTimeout(() => setStepState(1, "active"), 110);
-        setTimeout(() => setStepState(1, "completed"), 220);
-        setTimeout(() => setStepState(2, "active"), 230);
-
-        try {
-            const response = await fetch("/api/evaluate", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload)
-            });
-            const data = await response.json();
-            if (data.status === "success") {
-                const res = data.result;
-                setStepState(2, "completed");
-                setStepState(3, "completed");
-                setStepState(4, "completed");
-                setStepState(5, "completed");
-                displayClinicianResults(res);
-            }
-        } catch (err) {
-            console.error("Evaluation error:", err);
-            setStepState(3, "failed");
-        } finally {
-            btnEvaluate.disabled = false;
-            btnEvaluate.innerHTML = `<span>Execute Neuro-Symbolic Evaluation</span> <span>→</span>`;
-        }
-    });
-
-    function displayClinicianResults(res) {
         resultsWelcome.classList.add("hidden");
         resultsPanel.classList.remove("hidden");
 
         const isApproved = res.status === "APPROVED";
-        const banner = document.getElementById("verification-banner");
+        const statusBadge = document.getElementById("res-status-badge");
         const statusText = document.getElementById("res-status-text");
-        const attemptMetric = document.getElementById("res-attempt-metric");
 
         if (isApproved) {
-            banner.style.borderLeftColor = "var(--color-forest)";
+            statusBadge.className = "badge-status badge-verified";
             statusText.textContent = "HERMIT OWL 2 DL VERIFIED: APPROVED";
-            statusText.style.color = "var(--color-forest)";
-            const retries = res.retries_count || 0;
-            const latency = res.verification_details?.reasoner_latency_ms || 0.40;
-            attemptMetric.textContent = `${res.total_attempts} Attempt (${retries} Retries) • ${latency} ms reasoner`;
         } else {
-            banner.style.borderLeftColor = "var(--color-crimson)";
-            statusText.textContent = "ESCALATED FOR HUMAN CLINICIAN REVIEW";
-            statusText.style.color = "var(--color-crimson)";
-            attemptMetric.textContent = "Maximum retries exhausted without proof";
+            statusBadge.className = "badge-status badge-contraindicated";
+            statusText.textContent = "ESCALATED FOR SPECIALIST REVIEW";
         }
+
+        // Patient Profile & Diagnosed Condition
+        const pid = intakePayload?.patient_id || res.patient_id || "PT_001";
+        const pname = intakePayload?.patient_name || res.patient_name || "Patient";
+        const page = intakePayload?.age || 65;
+        const pgender = intakePayload?.gender || "Male";
+        document.getElementById("res-patient-profile").textContent = `Patient: ${pname} (${pid}) • Age: ${page} • ${pgender}`;
 
         document.getElementById("res-diagnosed-condition").textContent = res.diagnosed_condition || "Cardiometabolic Multimorbidity";
         document.getElementById("res-icd10").textContent = `ICD-10: ${res.icd10_code || 'R69'}`;
-        const egfr = res.verification_details?.egfr || document.getElementById("input-egfr").value;
-        document.getElementById("res-stage-desc").textContent = `eGFR ${egfr} mL/min/1.73m²`;
 
-        document.getElementById("res-recommended-treatment").textContent = res.recommended_treatment || res.last_proposed_treatment || "Withheld";
+        // Biomarkers Strip
+        const labs = intakePayload?.lab_values || {};
+        document.getElementById("strip-egfr").textContent = `${labs.egfr || 22.0} mL/min`;
+        document.getElementById("strip-bp").textContent = `${labs.sbp || 138}/${labs.dbp || 84} mmHg`;
+        document.getElementById("strip-hba1c").textContent = `${labs.hba1c || 9.2}%`;
+        document.getElementById("strip-creatinine").textContent = `${labs.creatinine || 3.1} mg/dL`;
+
+        // Approved Treatment & Clinical Rationale
+        document.getElementById("res-recommended-treatment").textContent = res.recommended_treatment || res.last_proposed_treatment || "Withheld for Safety";
         document.getElementById("res-clinical-rationale").textContent = res.clinical_rationale || "";
 
-        // Differentials
+        // Contraindications Blocked Panel
+        const violationsContainer = document.getElementById("res-violations-list");
+        const violationsCount = document.getElementById("res-violations-count");
+        violationsContainer.innerHTML = "";
+
+        const allViolations = [...(res.intercepted_violations || []), ...(res.warnings || [])];
+        const uniqueViolations = Array.from(new Set(allViolations));
+
+        violationsCount.textContent = `${uniqueViolations.length} Safety Safeguard${uniqueViolations.length === 1 ? '' : 's'}`;
+
+        if (uniqueViolations.length === 0) {
+            violationsContainer.innerHTML = `
+                <div class="p-3 bg-[var(--bg-canvas)] border border-[var(--status-verified-border)] rounded-[12px] text-[var(--status-verified-text)]">
+                    ✓ Zero contraindications violated. Prescribed regimen satisfies all formal Description Logic safety axioms.
+                </div>
+            `;
+        } else {
+            uniqueViolations.forEach(v => {
+                const item = document.createElement("div");
+                item.className = "p-3 bg-[var(--bg-canvas)] border border-[var(--status-contraindicated-border)] rounded-[12px] flex items-start space-x-2 text-[var(--color-text-primary)]";
+                item.innerHTML = `
+                    <span class="text-[var(--status-contraindicated-text)] font-bold text-sm">⚠</span>
+                    <div class="leading-relaxed text-xs">
+                        <span class="font-medium text-[var(--status-contraindicated-text)]">Contraindication Blocked: </span>
+                        ${v}
+                    </div>
+                `;
+                violationsContainer.appendChild(item);
+            });
+        }
+
+        // Differential Diagnoses
         const diffContainer = document.getElementById("res-differentials");
         diffContainer.innerHTML = "";
-        (res.differential_diagnoses || ["Type 2 Diabetes", "Essential Hypertension"]).forEach(d => {
+        (res.differential_diagnoses || ["Type 2 Diabetes Mellitus", "Stage 2 Essential Hypertension"]).forEach(d => {
             const span = document.createElement("span");
-            span.className = "bg-[#f7f7f4] border border-[#cdcdc9] px-2 py-0.5 text-[11px] text-[#26251e]";
+            span.className = "badge-status badge-info";
             span.textContent = d;
             diffContainer.appendChild(span);
         });
 
-        // HermiT Proof Card
-        const verDetails = res.verification_details || {};
-        document.getElementById("res-proof-details").textContent = verDetails.proof_details || "Tableaux verified with 0 contradiction.";
-        document.getElementById("res-reasoning-engine").textContent = verDetails.engine || "HermiT OWL 2 DL Reasoner";
-        document.getElementById("res-reasoner-latency").textContent = `${verDetails.reasoner_latency_ms || 0.40} ms per pass`;
-        document.getElementById("res-memory-isolation").textContent = verDetails.memory_isolation || "Isolated In-Memory World";
-
-        // Guidelines
+        // Guidelines Excerpts
         const glContainer = document.getElementById("res-guidelines-container");
         glContainer.innerHTML = "";
         const passages = res.retrieved_passages || [];
-        document.getElementById("res-guidelines-count").textContent = `${passages.length} Passages`;
+        document.getElementById("res-guidelines-count").textContent = `${passages.length} Citations`;
 
         passages.forEach(p => {
             const div = document.createElement("div");
-            div.className = "bg-[#f7f7f4] border border-[#cdcdc9] p-3 text-xs space-y-1";
+            div.className = "bg-[var(--bg-canvas)] border border-[var(--color-border)] p-3 rounded-[12px] text-xs space-y-1";
             div.innerHTML = `
                 <div class="flex items-center justify-between text-[11px]">
-                    <span class="font-medium text-[#26251e]">${p.source}</span>
-                    <span class="font-mono text-[#84847e]">RRF: ${p.score}</span>
+                    <span class="font-medium text-[var(--color-text-primary)]">${p.source}</span>
+                    <span class="font-mono text-[var(--color-text-muted)]">RRF Score: ${p.score || '0.016'}</span>
                 </div>
-                <div class="text-[11px] text-[#7a7974]">${p.topic}</div>
-                <p class="text-[#26251e] leading-relaxed">"${p.text}"</p>
+                <div class="text-[11px] text-[var(--color-text-muted)]">${p.topic}</div>
+                <p class="text-[var(--color-text-secondary)] leading-relaxed italic">"${p.text}"</p>
             `;
             glContainer.appendChild(div);
         });
+
+        // Collapsible Formal Proof Accordion (Bottom)
+        const verDetails = res.verification_details || {};
+        document.getElementById("res-proof-details").textContent = verDetails.proof_details || "Tableaux verified with 0 contradiction.";
+        document.getElementById("res-reasoning-engine").textContent = verDetails.engine || "HermiT OWL 2 DL Reasoner";
+        document.getElementById("res-reasoner-latency").textContent = `${verDetails.reasoner_latency_ms || 0.40} ms reasoner`;
+        document.getElementById("res-memory-isolation").textContent = verDetails.memory_isolation || "Ephemeral In-Memory World";
 
         // Audit Trail
         const trailContainer = document.getElementById("res-audit-trail-container");
         trailContainer.innerHTML = "";
         const trail = res.chronological_trace || res.audit_trail || [];
-        document.getElementById("res-trail-count").textContent = `${trail.length} Steps`;
 
         trail.forEach((t, idx) => {
             const div = document.createElement("div");
-            div.className = "bg-[#f7f7f4] border border-[#cdcdc9] p-2 flex items-start space-x-2";
+            div.className = "p-2 bg-[var(--bg-surface)] border border-[var(--color-border)] rounded-[8px] flex items-start space-x-2 text-[11px]";
             if (typeof t === "string") {
-                div.innerHTML = `<span class="text-[#84847e]">${idx + 1}.</span> <span class="text-[#26251e]">${t}</span>`;
+                div.innerHTML = `<span class="text-[var(--color-text-muted)]">${idx + 1}.</span> <span>${t}</span>`;
             } else {
-                div.innerHTML = `<span class="text-[#84847e]">${t.step}.</span> <span class="font-medium text-[#26251e]">[${t.stage}]</span> <span class="text-[#7a7974]">${t.message}</span>`;
+                div.innerHTML = `
+                    <span class="text-[var(--color-text-muted)]">${t.step || idx + 1}.</span>
+                    <span class="font-mono font-medium text-[var(--color-text-primary)]">[${t.stage || 'TRACE'}]</span>
+                    <span class="text-[var(--color-text-secondary)]">${t.message || JSON.stringify(t)}</span>
+                `;
             }
             trailContainer.appendChild(div);
         });
     }
 
-    // Benchmark Tab Loader
-    async function loadBenchmarkData() {
-        const btnRun = document.getElementById("btn-run-benchmark");
-        btnRun.onclick = async () => {
-            btnRun.disabled = true;
-            btnRun.textContent = "Running Benchmark...";
-            await executeBenchmark();
-            btnRun.disabled = false;
-            btnRun.textContent = "Run Benchmark";
-        };
-        await executeBenchmark();
+    // ========================================================
+    // 8. BENCHMARK TAB (TABLE 8.3)
+    // ========================================================
+    const btnRunBenchmark = document.getElementById("btn-run-benchmark");
+    if (btnRunBenchmark) {
+        btnRunBenchmark.addEventListener("click", () => loadBenchmarkTab(true));
     }
 
-    async function executeBenchmark() {
-        const res = await fetch("/api/benchmark", { method: "POST" });
-        const data = await res.json();
-        if (data.status === "success") {
-            const bm = data.benchmark;
-            document.getElementById("bm-first-pass").textContent = `${bm.metrics.first_pass_rate.toFixed(1)}%`;
-            document.getElementById("bm-escape-rate").textContent = `${bm.metrics.formal_violation_escape_rate.toFixed(1)}%`;
-            document.getElementById("bm-safe-rate").textContent = `${bm.metrics.overall_safe_rate.toFixed(1)}%`;
-            document.getElementById("bm-runtime").textContent = `${bm.metrics.execution_time_seconds.toFixed(2)}s`;
+    async function loadBenchmarkTab(forceRun = false) {
+        const tbody = document.getElementById("benchmark-tbody");
+        if (!tbody) return;
 
-            const tbody = document.getElementById("benchmark-tbody");
-            tbody.innerHTML = "";
-            (bm.patient_details || []).forEach(pt => {
-                const tr = document.createElement("tr");
-                const isSafe = pt.outcome.includes("SAFE");
-                tr.innerHTML = `
-                    <td class="p-2.5 font-mono text-[#26251e]">${pt.patient_id}</td>
-                    <td class="p-2.5 text-[#84847e]">${pt.conditions.join(", ")}</td>
-                    <td class="p-2.5 font-mono ${isSafe ? 'text-[#34785c]' : 'text-[#cf2d56]'}">${pt.outcome}</td>
-                    <td class="p-2.5 font-mono">${pt.attempts}</td>
-                    <td class="p-2.5 font-mono text-[#26251e]">${pt.approved_drug}</td>
-                `;
-                tbody.appendChild(tr);
-            });
+        tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-[var(--color-text-muted)]">Running cohort evaluation across all adult & pediatric cases...</td></tr>`;
+
+        try {
+            const res = await fetch("/api/benchmark", { method: "POST" });
+            const data = await res.json();
+            if (data.status === "success") {
+                const bm = data.benchmark;
+                document.getElementById("bm-first-pass").textContent = `${bm.metrics.first_pass_rate}%`;
+                document.getElementById("bm-escape-rate").textContent = `${bm.metrics.formal_violation_escape_rate}%`;
+                document.getElementById("bm-safe-rate").textContent = `${bm.metrics.overall_safe_rate}%`;
+                document.getElementById("bm-runtime").textContent = `${bm.metrics.total_runtime_seconds}s`;
+
+                tbody.innerHTML = "";
+                bm.patients.forEach(p => {
+                    const tr = document.createElement("tr");
+                    const isPassed = p.status === "APPROVED" || p.status === "SAFE_FIRST_PASS";
+                    const isPeds = p.patient_id.includes("007");
+
+                    tr.innerHTML = `
+                        <td class="p-3 font-mono font-medium ${isPeds ? 'text-[var(--accent-spark)]' : ''}">
+                            ${p.patient_id} ${isPeds ? '<span class="badge-status badge-info text-[10px]">Peds</span>' : ''}
+                        </td>
+                        <td class="p-3 text-[var(--color-text-muted)]">${p.conditions.join(", ")}</td>
+                        <td class="p-3">
+                            <span class="badge-status ${isPassed ? 'badge-verified' : 'badge-contraindicated'}">
+                                ${p.outcome || p.status}
+                            </span>
+                        </td>
+                        <td class="p-3 font-mono">${p.attempts || 1}</td>
+                        <td class="p-3 font-medium text-[var(--color-text-primary)]">${p.approved_medication || '-'}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+        } catch (err) {
+            console.error("Benchmark error:", err);
+            tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-[var(--status-contraindicated-text)]">Error executing benchmark</td></tr>`;
         }
     }
 
-    // Axioms Tab Loader
-    async function loadOntologyAxioms() {
-        const res = await fetch("/api/ontology");
-        const data = await res.json();
+    // ========================================================
+    // 9. SAFETY AXIOMS TAB
+    // ========================================================
+    async function loadAxiomsTab() {
         const container = document.getElementById("axioms-cards-container");
-        container.innerHTML = "";
+        if (!container) return;
+        container.innerHTML = `<span class="text-xs text-[var(--color-text-muted)]">Loading Description Logic axioms...</span>`;
 
-        data.axioms.forEach(axiom => {
-            const div = document.createElement("div");
-            div.className = "bg-[#f7f7f4] border border-[#cdcdc9] p-4 space-y-2 text-xs";
-            div.innerHTML = `
-                <div class="flex items-center justify-between">
-                    <span class="font-mono text-xs text-[#cf2d56]">${axiom.class_name}</span>
-                    <span class="text-[10px] font-mono text-[#84847e]">OWL 2 DL</span>
-                </div>
-                <div class="bg-[#f2f1ed] border border-[#cdcdc9] p-2.5 font-mono text-[11px] text-[#26251e] space-y-0.5">
-                    <div>${axiom.class_name} ≡ Patient</div>
-                    <div class="pl-3">⊓ ∃ hasCondition.${axiom.condition}</div>
-                    <div class="pl-3">⊓ ∃ hasPrescribedDrug.${axiom.medication}</div>
-                </div>
-                <p class="text-[11px] text-[#7a7974]">${axiom.description}</p>
-            `;
-            container.appendChild(div);
-        });
+        try {
+            const res = await fetch("/api/ontology");
+            const data = await res.json();
+            if (data.status === "success") {
+                container.innerHTML = "";
+                data.axioms.forEach(ax => {
+                    const card = document.createElement("div");
+                    card.className = "bg-[var(--bg-canvas)] border border-[var(--color-border)] p-4 rounded-[16px] space-y-2 text-xs";
+                    card.innerHTML = `
+                        <div class="flex items-center justify-between">
+                            <span class="font-mono font-medium text-[var(--status-contraindicated-text)]">${ax.class_name}</span>
+                            <span class="badge-status badge-info font-mono text-[10px]">OWL EquivalentClass</span>
+                        </div>
+                        <p class="text-[var(--color-text-secondary)] leading-relaxed">${ax.description}</p>
+                        <div class="pt-2 border-t border-[var(--color-border)] font-mono text-[11px] text-[var(--color-text-muted)]">
+                            Condition: <span class="text-[var(--color-text-primary)]">${ax.condition}</span> | Contraindicated Drug: <span class="text-[var(--status-contraindicated-text)]">${ax.medication}</span>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+            }
+        } catch (err) {
+            console.error("Axioms error:", err);
+        }
     }
 
-    // Guidelines Tab Loader
-    async function loadGuidelinesData() {
-        const res = await fetch("/api/guidelines");
-        const guidelines = await res.json();
+    // ========================================================
+    // 10. GUIDELINES KNOWLEDGE BASE TAB
+    // ========================================================
+    async function loadGuidelinesTab() {
         const container = document.getElementById("guidelines-full-list");
-        container.innerHTML = "";
+        if (!container) return;
+        container.innerHTML = `<span class="text-xs text-[var(--color-text-muted)]">Loading clinical practice guidelines corpus...</span>`;
 
-        guidelines.forEach(g => {
-            const div = document.createElement("div");
-            div.className = "bg-[#f7f7f4] border border-[#cdcdc9] p-4 text-xs space-y-1";
-            div.innerHTML = `
-                <div class="flex items-center justify-between text-[11px]">
-                    <span class="font-medium text-[#26251e]">${g.source}</span>
-                    <span class="font-mono text-[#84847e]">${g.id}</span>
-                </div>
-                <div class="text-[11px] font-medium text-[#7a7974]">${g.topic}</div>
-                <p class="text-[#26251e] leading-relaxed italic">"${g.text}"</p>
-            `;
-            container.appendChild(div);
-        });
+        try {
+            const res = await fetch("/api/guidelines");
+            const data = await res.json();
+            const list = Array.isArray(data) ? data : (data.guidelines || []);
+            container.innerHTML = "";
+            list.forEach(g => {
+                const div = document.createElement("div");
+                div.className = "bg-[var(--bg-canvas)] border border-[var(--color-border)] p-4 rounded-[16px] text-xs space-y-1.5";
+                div.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <span class="font-medium text-[var(--color-text-primary)]">${g.source}</span>
+                        <span class="badge-status badge-info font-mono text-[10px]">${g.id}</span>
+                    </div>
+                    <div class="text-[var(--color-text-muted)] font-medium">${g.topic}</div>
+                    <p class="text-[var(--color-text-secondary)] leading-relaxed">"${g.text}"</p>
+                `;
+                container.appendChild(div);
+            });
+        } catch (err) {
+            console.error("Guidelines error:", err);
+        }
     }
 
     // ========================================================
-    // 3. PATIENT ASSISTANT (CHATBOT UI CONTROLLER)
+    // 11. PATIENT ASSISTANT (CHATBOT CONTROLLER)
     // ========================================================
-    chatForm.addEventListener("submit", (e) => {
-        e.preventDefault();
-        const text = chatInput.value.trim();
-        if (!text) return;
-        sendPatientMessage(text);
-    });
+    if (chatForm && chatInput) {
+        chatForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const text = chatInput.value.trim();
+            if (!text && !chatAttachedContext.filename) return;
 
-    document.querySelectorAll(".prompt-pill").forEach(btn => {
-        btn.addEventListener("click", () => {
-            const prompt = btn.getAttribute("data-prompt");
-            chatInput.value = prompt;
-            sendPatientMessage(prompt);
-        });
-    });
+            appendChatMessage("user", text || `Uploaded report: ${chatAttachedContext.filename}`);
+            chatInput.value = "";
 
-    btnChatUploadPdf.addEventListener("click", () => chatPdfFileInput.click());
-    chatPdfFileInput.addEventListener("change", async (e) => {
-        if (e.target.files.length > 0) {
-            const file = e.target.files[0];
-            const formData = new FormData();
-            formData.append("file", file);
-
-            appendChatMessage("user", `Uploaded medical report: ${file.name}`);
-            const thinkingId = appendChatThinking();
+            const typingEl = appendChatTyping();
+            const provider = providerSelect.value;
+            const apiKey = provider === "gemini" ? apiKeys.gemini : (provider === "openai" ? apiKeys.openai : "");
 
             try {
-                const res = await fetch("/api/upload-pdf", {
+                const res = await fetch("/api/chat", {
                     method: "POST",
-                    body: formData
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        message: text,
+                        patient_id: "Patient_Chat",
+                        conditions: chatAttachedContext.conditions,
+                        lab_values: chatAttachedContext.lab_values,
+                        provider: provider,
+                        api_key: apiKey
+                    })
                 });
                 const data = await res.json();
-                removeChatThinking(thinkingId);
+                typingEl.remove();
 
                 if (data.status === "success") {
-                    const parsed = data.data;
-                    chatAttachedContext = {
-                        conditions: parsed.conditions || [],
-                        lab_values: {
+                    appendChatMessage("assistant", data.reply);
+                } else {
+                    appendChatMessage("assistant", "I encountered an error analyzing your health question. Please try again.");
+                }
+            } catch (err) {
+                console.error("Chat error:", err);
+                typingEl.remove();
+                appendChatMessage("assistant", "Network connection error. Please verify your connection.");
+            }
+        });
+    }
+
+    function appendChatMessage(role, text) {
+        const bubble = document.createElement("div");
+        bubble.className = `chat-bubble ${role === 'user' ? 'chat-bubble-user' : 'chat-bubble-assistant'}`;
+
+        let html = text
+            .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+            .replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>')
+            .replace(/\*(.*?)\*/gim, '<em>$1</em>')
+            .replace(/^- (.*$)/gim, '<li>$1</li>')
+            .replace(/\n\n/g, '<p></p>')
+            .replace(/\n/g, '<br>');
+
+        bubble.innerHTML = html;
+        chatMessages.appendChild(bubble);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function appendChatTyping() {
+        const bubble = document.createElement("div");
+        bubble.className = "chat-bubble chat-bubble-assistant text-xs text-[var(--color-text-muted)] italic";
+        bubble.textContent = "SafeCDS assistant is evaluating formal safety guidelines...";
+        chatMessages.appendChild(bubble);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+        return bubble;
+    }
+
+    // Prompt Starters
+    document.querySelectorAll(".prompt-pill").forEach(pill => {
+        pill.addEventListener("click", () => {
+            if (chatInput) {
+                chatInput.value = pill.getAttribute("data-prompt");
+                chatForm.dispatchEvent(new Event("submit"));
+            }
+        });
+    });
+
+    // Chat PDF Attachment
+    if (btnChatUploadPdf && chatPdfFileInput) {
+        btnChatUploadPdf.addEventListener("click", () => chatPdfFileInput.click());
+        chatPdfFileInput.addEventListener("change", async (e) => {
+            if (e.target.files.length > 0) {
+                const file = e.target.files[0];
+                const formData = new FormData();
+                formData.append("file", file);
+
+                try {
+                    const res = await fetch("/api/upload-pdf", { method: "POST", body: formData });
+                    const data = await res.json();
+                    if (data.status === "success") {
+                        const parsed = data.data;
+                        chatAttachedContext.conditions = parsed.conditions || [];
+                        chatAttachedContext.lab_values = {
                             egfr: parsed.egfr,
                             sbp: parsed.sbp,
                             dbp: parsed.dbp,
                             hba1c: parsed.hba1c,
                             creatinine: parsed.creatinine
-                        },
-                        filename: file.name
-                    };
-                    chatFilename.textContent = `${file.name} (eGFR: ${parsed.egfr || '-'}, BP: ${parsed.sbp || '-'}/${parsed.dbp || '-'})`;
-                    chatAttachedPill.classList.remove("hidden");
+                        };
+                        chatAttachedContext.filename = file.name;
 
-                    // Trigger automated assistant evaluation on the uploaded PDF
-                    sendPatientMessage(`Please evaluate my uploaded lab report (${file.name}).`);
+                        chatAttachedPill.classList.remove("hidden");
+                        chatFilename.textContent = `Attached: ${file.name} (eGFR: ${parsed.egfr || '-'}, HbA1c: ${parsed.hba1c || '-'}%)`;
+                    }
+                } catch (err) {
+                    console.error("Chat PDF error:", err);
                 }
-            } catch (err) {
-                removeChatThinking(thinkingId);
-                appendChatMessage("assistant", `Sorry, I encountered an issue parsing ${file.name}. Please ensure it is a valid PDF.`);
             }
-        }
-    });
-
-    btnRemoveChatFile.addEventListener("click", () => {
-        chatAttachedContext = { conditions: [], lab_values: {}, filename: null };
-        chatAttachedPill.classList.add("hidden");
-    });
-
-    async function sendPatientMessage(text) {
-        chatInput.value = "";
-        appendChatMessage("user", text);
-
-        const thinkingId = appendChatThinking();
-
-        const provider = providerSelect.value;
-        const apiKey = provider === "gemini" ? apiKeys.gemini : (provider === "openai" ? apiKeys.openai : "");
-
-        const payload = {
-            message: text,
-            history: chatHistory,
-            conditions: chatAttachedContext.conditions,
-            lab_values: chatAttachedContext.lab_values,
-            provider: provider,
-            api_key: apiKey
-        };
-
-        try {
-            const res = await fetch("/api/chat", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload)
-            });
-            const data = await res.json();
-            removeChatThinking(thinkingId);
-
-            if (data.status === "success") {
-                appendChatMessage("assistant", data.reply, data.verification);
-                chatHistory.push({ role: "user", content: text });
-                chatHistory.push({ role: "assistant", content: data.reply });
-            } else {
-                appendChatMessage("assistant", "I apologize, but I was unable to evaluate this request. Please consult a qualified physician.");
-            }
-        } catch (err) {
-            removeChatThinking(thinkingId);
-            appendChatMessage("assistant", "Network or service error. Please verify your connection or try again.");
-        }
+        });
     }
 
-    function appendChatMessage(role, content, verification) {
-        const bubble = document.createElement("div");
-        bubble.className = `chat-bubble chat-bubble-${role}`;
-
-        if (role === "user") {
-            bubble.textContent = content;
-        } else {
-            // Render assistant markdown-like formatting cleanly
-            let formatted = content
-                .replace(/^### (.*$)/gim, '<h3>$1</h3>')
-                .replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>')
-                .replace(/\*(.*?)\*/gim, '<em>$1</em>')
-                .replace(/`([^`]+)`/gim, '<code class="font-mono text-xs bg-[#e6e5e0] px-1 py-0.5">$1</code>')
-                .replace(/^- (.*$)/gim, '<li>$1</li>')
-                .replace(/\n\n/gim, '</p><p>')
-                .replace(/\n/gim, '<br>');
-
-            formatted = `<p>${formatted}</p>`;
-
-            // Append formal safety disclosure accordion
-            if (verification && verification.status) {
-                formatted += `
-                    <details class="mt-3 pt-2 border-t border-[#cdcdc9] text-xs">
-                        <summary class="font-mono text-[11px] text-[#34785c] cursor-pointer hover:underline">
-                            Formal Safety Gate Proof (HermiT OWL 2 DL)
-                        </summary>
-                        <div class="mt-2 bg-[#f7f7f4] border border-[#cdcdc9] p-2.5 font-mono text-[10px] text-[#26251e] space-y-1">
-                            <div>Proof: ${verification.proof_details || '0 Contradiction Tableaux Entailed'}</div>
-                            <div>Engine: ${verification.engine || 'HermiT Reasoner'}</div>
-                            <div>Memory Isolation: Ephemeral World (Zero Cross-Patient Bleed)</div>
-                            <div>Violation Escape Rate: 0.0% Guaranteed</div>
-                        </div>
-                    </details>
-                `;
-            }
-
-            bubble.innerHTML = formatted;
-        }
-
-        chatMessages.appendChild(bubble);
-        chatMessages.scrollTop = chatMessages.scrollHeight;
+    if (btnRemoveChatFile) {
+        btnRemoveChatFile.addEventListener("click", () => {
+            chatAttachedContext = { conditions: [], lab_values: {}, filename: null };
+            chatAttachedPill.classList.add("hidden");
+        });
     }
 
-    function appendChatThinking() {
-        const id = `thinking-${Date.now()}`;
-        const div = document.createElement("div");
-        div.id = id;
-        div.className = "chat-bubble chat-bubble-assistant text-xs text-[#84847e] font-mono";
-        div.textContent = "SafeCDS is retrieving guidelines & verifying ontological axioms...";
-        chatMessages.appendChild(div);
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-        return id;
-    }
-
-    function removeChatThinking(id) {
-        const el = document.getElementById(id);
-        if (el) el.remove();
-    }
-
-    // Initialize
-    loadCohort();
+    // Initial Load
+    fetchCohort();
 });

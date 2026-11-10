@@ -4,188 +4,165 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SafeCDS — Clinical Decision Support System</title>
-    <!-- Tailwind CSS CDN for utility classes -->
+    <!-- Tailwind CSS CDN for utility layout -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="/static/style.css">
 </head>
-<body class="min-h-screen flex flex-col">
+<body class="theme-light min-h-screen flex flex-col">
 
-    <!-- TOP HEADER (CURSOR EDITORIAL STYLE) -->
-    <header class="border-b border-[#cdcdc9] bg-[#f7f7f4] sticky top-0 z-40">
-        <div class="max-w-[1300px] mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
+    <!-- ======================================================== -->
+    <!-- TOP HEADER (ELEVENLABS LIGHT / LINEAR DARK ADAPTIVE)    -->
+    <!-- ======================================================== -->
+    <header class="app-header">
+        <div class="max-w-[1320px] mx-auto px-4 sm:px-6 h-15 flex items-center justify-between">
             <!-- Brand -->
-            <div class="flex items-baseline space-x-3">
-                <span class="font-serif text-2xl tracking-tight text-[#26251e]">SafeCDS</span>
-                <span class="text-xs text-[#84847e] hidden md:inline">Neuro-Symbolic Agentic RAG • Cardiometabolic Multi-Morbidity</span>
+            <div class="flex items-center space-x-3">
+                <span class="font-display text-2xl tracking-tight text-[var(--color-text-primary)] font-light">SafeCDS</span>
+                <span class="text-xs text-[var(--color-text-muted)] hidden md:inline font-mono">/ Clinical Decision Support</span>
             </div>
 
             <!-- Segmented View Switcher (Clinician vs Patient) -->
-            <div class="view-switcher">
+            <div class="view-switcher-pill">
                 <button type="button" id="btn-view-clinician" class="view-btn active">Clinician Workbench</button>
                 <button type="button" id="btn-view-patient" class="view-btn">Patient Assistant</button>
             </div>
 
-            <!-- Controls: Model Selector, API Key, Print -->
+            <!-- Header Controls: Theme Toggle, Model, Print -->
             <div class="flex items-center space-x-2">
-                <div class="flex items-center bg-[#f2f1ed] border border-[#cdcdc9] rounded px-2 py-1 text-xs">
-                    <span class="text-[#84847e] mr-1.5 hidden lg:inline">Model:</span>
-                    <select id="provider-select" class="bg-transparent text-xs font-mono text-[#26251e] border-none focus:outline-none cursor-pointer">
+                <!-- Theme Toggle Button (☀️ Light / 🌙 Dark) -->
+                <button type="button" id="btn-theme-toggle" class="theme-toggle-btn" title="Toggle Theme (Light / Dark)">
+                    <span id="theme-icon">☀️</span>
+                    <span id="theme-label" class="hidden sm:inline">Light</span>
+                </button>
+
+                <!-- Model Selector -->
+                <div class="flex items-center bg-[var(--bg-surface)] border border-[var(--color-border)] rounded-full px-3 py-1.5 text-xs">
+                    <span class="text-[var(--color-text-muted)] mr-1.5 hidden lg:inline">Model:</span>
+                    <select id="provider-select" class="bg-transparent text-xs font-mono text-[var(--color-text-primary)] border-none focus:outline-none cursor-pointer">
                         <option value="local" selected>LLaMA-3.2 (Local)</option>
                         <option value="gemini">Google Gemini</option>
                         <option value="openai">ChatGPT (GPT-4o)</option>
                         <option value="antigravity">Antigravity Pro</option>
                     </select>
-                    <button type="button" id="btn-api-key" title="Cloud API Keys" class="ml-1 text-[#84847e] hover:text-[#26251e]">
+                    <button type="button" id="btn-api-key" title="Provider API Keys" class="ml-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
                     </button>
                 </div>
 
+                <!-- Print Clinical Note -->
                 <button type="button" id="btn-print" class="btn-secondary hidden sm:inline-flex text-xs">
-                    <svg class="w-3.5 h-3.5 text-[#7a7974]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4H7v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
-                    <span>Print Report</span>
+                    <svg class="w-3.5 h-3.5 text-[var(--color-text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4H7v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+                    <span>Print Note</span>
                 </button>
             </div>
         </div>
     </header>
 
     <!-- OPTIONAL API KEY MODAL -->
-    <div id="modal-api-keys" class="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-center justify-center hidden">
-        <div class="paper-card max-w-sm w-full p-6 shadow-xl mx-4 bg-[#f2f1ed]">
+    <div id="modal-api-keys" class="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center hidden">
+        <div class="feature-card max-w-sm w-full p-6 shadow-xl mx-4 bg-[var(--bg-surface-elevated)]">
             <div class="flex justify-between items-center mb-3">
-                <h3 class="text-sm font-medium text-[#26251e]">Model Provider Credentials</h3>
-                <button type="button" id="btn-close-modal" class="text-sm text-[#7a7974] hover:text-[#26251e]">&times;</button>
+                <h3 class="text-sm font-medium text-[var(--color-text-primary)]">Model Provider Credentials</h3>
+                <button type="button" id="btn-close-modal" class="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]">&times;</button>
             </div>
-            <p class="text-xs text-[#84847e] mb-4">SafeCDS runs 100% locally by default. Add API keys if you wish to run evaluations via external foundation models.</p>
+            <p class="text-xs text-[var(--color-text-muted)] mb-4 leading-relaxed">SafeCDS runs 100% locally by default. Add API keys if you wish to run evaluations via external foundation models.</p>
             <div class="space-y-3 text-xs">
                 <div>
-                    <label class="block text-[#7a7974] mb-1">Google Gemini API Key</label>
+                    <label class="block text-[var(--color-text-muted)] mb-1">Google Gemini API Key</label>
                     <input type="password" id="input-gemini-key" placeholder="AIzaSy..." class="w-full font-mono">
                 </div>
                 <div>
-                    <label class="block text-[#7a7974] mb-1">OpenAI API Key</label>
+                    <label class="block text-[var(--color-text-muted)] mb-1">OpenAI API Key</label>
                     <input type="password" id="input-openai-key" placeholder="sk-..." class="w-full font-mono">
                 </div>
             </div>
             <div class="mt-5 flex justify-end space-x-2">
-                <button type="button" id="btn-save-keys" class="btn-primary text-xs">Save</button>
+                <button type="button" id="btn-save-keys" class="btn-primary text-xs">Save Credentials</button>
             </div>
         </div>
     </div>
 
     <!-- MAIN APP CONTENT -->
-    <main class="flex-1 max-w-[1300px] w-full mx-auto px-4 sm:px-6 py-6">
+    <main class="flex-1 max-w-[1320px] w-full mx-auto px-4 sm:px-6 py-6">
 
         <!-- ========================================== -->
-        <!-- VIEW 1: CLINICIAN WORKBENCH (DOCTOR MODE) -->
+        <!-- VIEW 1: CLINICIAN WORKBENCH (DOCTOR MODE)  -->
         <!-- ========================================== -->
         <div id="view-clinician" class="space-y-6">
 
             <!-- Tab Navigation for Clinician Tools -->
-            <nav class="flex border-b border-[#cdcdc9] space-x-6 text-xs">
+            <nav class="flex space-x-2 text-xs border-b border-[var(--color-border)] pb-3">
                 <button type="button" data-tab="tab-solver" class="nav-tab active-tab">Case Solver</button>
                 <button type="button" data-tab="tab-benchmark" class="nav-tab">Cohort Benchmark (Table 8.3)</button>
-                <button type="button" data-tab="tab-axioms" class="nav-tab">Diagnostic Axioms (OWL)</button>
-                <button type="button" data-tab="tab-guidelines" class="nav-tab">Clinical Guidelines</button>
+                <button type="button" data-tab="tab-axioms" class="nav-tab">Safety Axioms (OWL DL)</button>
+                <button type="button" data-tab="tab-guidelines" class="nav-tab">Guidelines Knowledge Base</button>
             </nav>
 
             <!-- TAB: CASE SOLVER -->
             <div id="tab-solver" class="tab-content block space-y-6">
 
-                <!-- 6-Stage Pipeline Stepper -->
-                <div class="paper-card p-3 flex items-center justify-between text-xs overflow-x-auto gap-2" id="pipeline-stepper">
-                    <div class="step-chip" id="step-1">
-                        <span class="step-num">1</span>
-                        <span>Ingest</span>
-                    </div>
-                    <span class="text-[#cdcdc9]">/</span>
-                    <div class="step-chip" id="step-2">
-                        <span class="step-num">2</span>
-                        <span>RAG (RRF)</span>
-                    </div>
-                    <span class="text-[#cdcdc9]">/</span>
-                    <div class="step-chip" id="step-3">
-                        <span class="step-num">3</span>
-                        <span>Neural Proposer</span>
-                    </div>
-                    <span class="text-[#cdcdc9]">/</span>
-                    <div class="step-chip" id="step-4">
-                        <span class="step-num">4</span>
-                        <span>HermiT DL</span>
-                    </div>
-                    <span class="text-[#cdcdc9]">/</span>
-                    <div class="step-chip" id="step-5">
-                        <span class="step-num">5</span>
-                        <span>Self-Correct</span>
-                    </div>
-                    <span class="text-[#cdcdc9]">/</span>
-                    <div class="step-chip" id="step-6">
-                        <span class="step-num">6</span>
-                        <span>Verified Dx/Rx</span>
-                    </div>
-                </div>
-
                 <!-- Two-Column Grid: Intake Left (5 cols), Verification Right (7 cols) -->
                 <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
-                    <!-- LEFT COLUMN: Patient Intake & Report Ingestion -->
+                    <!-- LEFT COLUMN: Patient Intake & Case Setup -->
                     <div class="lg:col-span-5 space-y-5">
 
-                        <!-- Cohort Quick Presets -->
-                        <div class="paper-card p-4">
-                            <div class="flex items-center justify-between mb-2.5">
-                                <span class="text-xs font-medium text-[#26251e]">Benchmark Patient Cohort</span>
-                                <span class="text-[11px] text-[#84847e]">Click to load case</span>
+                        <!-- Cohort Quick Presets (Adult + Pediatrics) -->
+                        <div class="feature-card p-4 space-y-2.5">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-medium text-[var(--color-text-primary)]">Patient Presets (Adult & Pediatrics)</span>
+                                <span class="text-[11px] text-[var(--color-text-muted)]">Select case</span>
                             </div>
-                            <div class="grid grid-cols-3 gap-2" id="cohort-buttons">
-                                <!-- Populated dynamically -->
+                            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2" id="cohort-buttons">
+                                <!-- Populated dynamically from data/cohort.json -->
                             </div>
                         </div>
 
                         <!-- Local PDF Report Dropzone -->
-                        <div class="paper-card p-4 space-y-2">
+                        <div class="feature-card p-4 space-y-2">
                             <div class="flex items-center justify-between">
-                                <span class="text-xs font-medium text-[#26251e]">Patient Lab Report (PDF)</span>
-                                <span class="text-[10px] font-mono text-[#84847e]">pypdfium2 local parser</span>
+                                <span class="text-xs font-medium text-[var(--color-text-primary)]">Ingest Clinical Lab Report (PDF)</span>
+                                <span class="text-[10px] font-mono text-[var(--color-text-muted)]">pypdfium2 local parser</span>
                             </div>
-                            <div id="pdf-dropzone" class="border border-dashed border-[#cdcdc9] hover:border-[#26251e] bg-[#f7f7f4] p-4 text-center cursor-pointer transition">
-                                <p class="text-xs text-[#26251e]">Drop clinical report PDF here, or <span class="underline">browse</span></p>
-                                <p class="text-[11px] text-[#84847e] mt-0.5">Extracts eGFR, HbA1c, and BP directly into intake fields</p>
+                            <div id="pdf-dropzone" class="border border-dashed border-[var(--color-border)] hover:border-[var(--color-border-hover)] bg-[var(--bg-canvas)] p-5 text-center cursor-pointer transition rounded-[16px]">
+                                <p class="text-xs text-[var(--color-text-primary)] font-medium">Drop patient lab report PDF here, or <span class="underline">browse</span></p>
+                                <p class="text-[11px] text-[var(--color-text-muted)] mt-1">Automatically parses eGFR, HbA1c, BP, and documented diagnoses</p>
                                 <input type="file" id="pdf-file-input" accept=".pdf" class="hidden">
                             </div>
-                            <div class="flex items-center justify-between text-[11px] text-[#84847e] pt-1">
-                                <span>Sample reports:</span>
+                            <div class="flex items-center justify-between text-[11px] text-[var(--color-text-muted)] pt-1">
+                                <span>Sample test reports:</span>
                                 <div class="flex space-x-2">
-                                    <button type="button" class="btn-sample-pdf hover:text-[#26251e] underline" data-file="PT_001_Clinical_Lab_Report.pdf">PT_001.pdf</button>
+                                    <button type="button" class="btn-sample-pdf hover:text-[var(--color-text-primary)] underline" data-file="PT_001_Clinical_Lab_Report.pdf">PT_001.pdf</button>
                                     <span>•</span>
-                                    <button type="button" class="btn-sample-pdf hover:text-[#26251e] underline" data-file="PT_002_Renal_Panel_Discharge.pdf">PT_002.pdf</button>
+                                    <button type="button" class="btn-sample-pdf hover:text-[var(--color-text-primary)] underline" data-file="PT_002_Renal_Panel_Discharge.pdf">PT_002.pdf</button>
                                     <span>•</span>
-                                    <button type="button" class="btn-sample-pdf hover:text-[#26251e] underline" data-file="PT_004_Cardiology_Summary.pdf">PT_004.pdf</button>
+                                    <button type="button" class="btn-sample-pdf hover:text-[var(--color-text-primary)] underline" data-file="PT_004_Cardiology_Summary.pdf">PT_004.pdf</button>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Intake Form -->
-                        <form id="intake-form" class="paper-card p-4 space-y-4">
-                            <div class="flex items-center justify-between border-b border-[#cdcdc9] pb-2">
-                                <span class="text-xs font-medium text-[#26251e]">Clinical Intake Profile</span>
-                                <span id="intake-badge" class="text-[11px] font-mono text-[#84847e]">PT_001</span>
+                        <!-- Patient Intake Form -->
+                        <form id="intake-form" class="feature-card p-5 space-y-4">
+                            <div class="flex items-center justify-between border-b border-[var(--color-border)] pb-2.5">
+                                <span class="text-xs font-medium text-[var(--color-text-primary)]">Patient Intake Profile</span>
+                                <span id="intake-badge" class="badge-status badge-info font-mono text-[11px]">PT_001</span>
                             </div>
 
                             <div class="grid grid-cols-2 gap-3 text-xs">
                                 <div>
-                                    <label class="block text-[#7a7974] mb-1">Patient ID</label>
+                                    <label class="block text-[var(--color-text-muted)] mb-1">Patient ID</label>
                                     <input type="text" id="patient-id" value="PT_001" class="w-full font-mono">
                                 </div>
                                 <div>
-                                    <label class="block text-[#7a7974] mb-1">Patient Name</label>
+                                    <label class="block text-[var(--color-text-muted)] mb-1">Patient Name</label>
                                     <input type="text" id="patient-name" value="Robert Miller" class="w-full">
                                 </div>
                                 <div>
-                                    <label class="block text-[#7a7974] mb-1">Age</label>
+                                    <label class="block text-[var(--color-text-muted)] mb-1">Age</label>
                                     <input type="number" id="patient-age" value="68" class="w-full">
                                 </div>
                                 <div>
-                                    <label class="block text-[#7a7974] mb-1">Biological Sex</label>
+                                    <label class="block text-[var(--color-text-muted)] mb-1">Biological Sex</label>
                                     <select id="patient-gender" class="w-full">
                                         <option value="Male" selected>Male</option>
                                         <option value="Female">Female</option>
@@ -193,57 +170,65 @@
                                 </div>
                             </div>
 
-                            <!-- Diagnosed Conditions -->
+                            <!-- Documented Conditions -->
                             <div class="space-y-1.5 text-xs">
-                                <label class="block text-[#7a7974]">Documented Conditions</label>
+                                <label class="block text-[var(--color-text-muted)]">Documented Clinical Findings</label>
                                 <div class="flex flex-wrap gap-1.5">
-                                    <label class="condition-chip cursor-pointer px-2.5 py-1 bg-[#f7f7f4] border border-[#cdcdc9] text-xs transition flex items-center space-x-1.5 hover:border-[#26251e]">
+                                    <label class="condition-chip">
                                         <input type="checkbox" value="CKD_Stage_4_5" checked class="condition-checkbox">
                                         <span>CKD Stage 4/5</span>
                                     </label>
-                                    <label class="condition-chip cursor-pointer px-2.5 py-1 bg-[#f7f7f4] border border-[#cdcdc9] text-xs transition flex items-center space-x-1.5 hover:border-[#26251e]">
+                                    <label class="condition-chip">
                                         <input type="checkbox" value="Type_2_Diabetes" checked class="condition-checkbox">
                                         <span>Type 2 Diabetes</span>
                                     </label>
-                                    <label class="condition-chip cursor-pointer px-2.5 py-1 bg-[#f7f7f4] border border-[#cdcdc9] text-xs transition flex items-center space-x-1.5 hover:border-[#26251e]">
+                                    <label class="condition-chip">
                                         <input type="checkbox" value="Hypertension" class="condition-checkbox">
                                         <span>Hypertension</span>
                                     </label>
-                                    <label class="condition-chip cursor-pointer px-2.5 py-1 bg-[#f7f7f4] border border-[#cdcdc9] text-xs transition flex items-center space-x-1.5 hover:border-[#26251e]">
+                                    <label class="condition-chip">
                                         <input type="checkbox" value="Heart_Failure" class="condition-checkbox">
                                         <span>Heart Failure</span>
+                                    </label>
+                                    <label class="condition-chip">
+                                        <input type="checkbox" value="PediatricNephropathy" class="condition-checkbox">
+                                        <span>Pediatric Nephropathy</span>
+                                    </label>
+                                    <label class="condition-chip">
+                                        <input type="checkbox" value="Type_1_Diabetes" class="condition-checkbox">
+                                        <span>Type 1 Diabetes</span>
                                     </label>
                                 </div>
                             </div>
 
-                            <!-- Biomarkers -->
-                            <div class="space-y-3 pt-2 border-t border-[#cdcdc9] text-xs">
+                            <!-- Key Biomarkers & Labs -->
+                            <div class="space-y-3 pt-2 border-t border-[var(--color-border)] text-xs">
                                 <div>
                                     <div class="flex justify-between text-xs mb-1">
-                                        <label class="text-[#7a7974]">eGFR (mL/min/1.73m²)</label>
-                                        <span id="label-egfr-stage" class="font-mono font-medium text-[#26251e]">22.0 (Stage 4)</span>
+                                        <label class="text-[var(--color-text-muted)]" id="label-egfr-title">eGFR Kidney Filtration (mL/min/1.73m²)</label>
+                                        <span id="label-egfr-stage" class="font-mono font-medium text-[var(--color-text-primary)]">22.0 (KDIGO Stage 4)</span>
                                     </div>
                                     <input type="range" id="input-egfr" min="5" max="110" step="1" value="22" class="w-full">
                                 </div>
 
                                 <div class="grid grid-cols-2 gap-3">
                                     <div>
-                                        <label class="block text-[#7a7974] mb-1">Systolic BP (mmHg)</label>
+                                        <label class="block text-[var(--color-text-muted)] mb-1">Systolic BP (mmHg)</label>
                                         <input type="number" id="input-sbp" value="138" class="w-full font-mono">
                                     </div>
                                     <div>
-                                        <label class="block text-[#7a7974] mb-1">Diastolic BP (mmHg)</label>
+                                        <label class="block text-[var(--color-text-muted)] mb-1">Diastolic BP (mmHg)</label>
                                         <input type="number" id="input-dbp" value="84" class="w-full font-mono">
                                     </div>
                                 </div>
 
                                 <div class="grid grid-cols-2 gap-3">
                                     <div>
-                                        <label class="block text-[#7a7974] mb-1">HbA1c (%)</label>
+                                        <label class="block text-[var(--color-text-muted)] mb-1">HbA1c (%)</label>
                                         <input type="number" step="0.1" id="input-hba1c" value="9.2" class="w-full font-mono">
                                     </div>
                                     <div>
-                                        <label class="block text-[#7a7974] mb-1">Creatinine (mg/dL)</label>
+                                        <label class="block text-[var(--color-text-muted)] mb-1">Creatinine (mg/dL)</label>
                                         <input type="number" step="0.1" id="input-creatinine" value="3.1" class="w-full font-mono">
                                     </div>
                                 </div>
@@ -251,100 +236,149 @@
 
                             <!-- Clinical Narrative -->
                             <div class="text-xs space-y-1">
-                                <label class="block text-[#7a7974]">Clinical Presentation Narrative</label>
+                                <label class="block text-[var(--color-text-muted)]">Clinical History Narrative</label>
                                 <textarea id="clinical-narrative" rows="3" class="w-full text-xs">68-year-old male with longstanding Type 2 Diabetes presenting with progressive bilateral lower extremity edema, worsening fatigue, polydipsia, and marked nocturia. Labs reveal eGFR 22 mL/min/1.73m2 (KDIGO Stage 4) and HbA1c 9.2% reflecting uncontrolled hyperglycemia.</textarea>
                             </div>
 
-                            <button type="submit" id="btn-evaluate" class="btn-primary w-full py-2.5">
-                                <span>Execute Neuro-Symbolic Evaluation</span>
+                            <button type="submit" id="btn-evaluate" class="btn-primary w-full py-3">
+                                <span>Run Clinical Evaluation</span>
                                 <span>→</span>
                             </button>
                         </form>
                     </div>
 
-                    <!-- RIGHT COLUMN: Verification Results & Formal Audit -->
+                    <!-- RIGHT COLUMN: High-Visibility Clinical Decision Report -->
                     <div class="lg:col-span-7 space-y-5">
 
-                        <!-- Initial Welcome State -->
-                        <div id="results-welcome" class="paper-card p-10 text-center flex flex-col items-center justify-center min-h-[460px]">
-                            <h3 class="font-serif text-xl text-[#26251e]">Awaiting Clinical Evaluation</h3>
-                            <p class="text-xs text-[#84847e] max-w-sm mt-1 leading-relaxed">Select a benchmark cohort case from the left or upload a patient lab report PDF, then run the evaluation.</p>
+                        <!-- Initial Awaiting State -->
+                        <div id="results-welcome" class="feature-card p-12 text-center flex flex-col items-center justify-center min-h-[480px]">
+                            <div class="w-12 h-12 rounded-full bg-[var(--bg-surface-alt)] flex items-center justify-center text-[var(--color-text-muted)] mb-4">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                            </div>
+                            <h3 class="font-display text-2xl text-[var(--color-text-primary)]">Awaiting Clinical Intake</h3>
+                            <p class="text-xs text-[var(--color-text-muted)] max-w-sm mt-2 leading-relaxed">Select a benchmark cohort case from the left or upload a patient lab report PDF to generate a verified consultation note.</p>
                         </div>
 
-                        <!-- Active Results Panel -->
+                        <!-- Active High-Visibility Clinical Report -->
                         <div id="results-panel" class="hidden space-y-5">
 
-                            <!-- Status Banner -->
-                            <div id="verification-banner" class="paper-card p-4 border-l-4 border-l-[#34785c]">
-                                <div class="flex items-center justify-between border-b border-[#cdcdc9] pb-2 mb-3">
-                                    <span class="text-xs font-mono font-medium tracking-wide uppercase text-[#34785c]" id="res-status-text">HERMIT OWL 2 DL VERIFIED: APPROVED</span>
-                                    <span class="text-[11px] font-mono text-[#84847e]" id="res-attempt-metric">1 Attempt • 0.40 ms reasoner</span>
-                                </div>
-                                <div class="flex items-baseline justify-between">
-                                    <div>
-                                        <h2 class="font-serif text-2xl text-[#26251e]" id="res-diagnosed-condition">Chronic Kidney Disease Stage 4</h2>
-                                        <div class="flex items-center space-x-2 text-xs font-mono text-[#84847e] mt-0.5">
-                                            <span id="res-icd10">ICD-10: N18.4</span>
-                                            <span>•</span>
-                                            <span id="res-stage-desc">eGFR 22 mL/min/1.73m²</span>
-                                        </div>
+                            <!-- HERO CONSULTATION SUMMARY CARD -->
+                            <div class="report-hero-card space-y-4">
+                                <!-- Top Status Header -->
+                                <div class="flex items-center justify-between border-b border-[var(--color-border)] pb-3">
+                                    <div class="flex items-center space-x-2">
+                                        <span class="badge-status badge-verified" id="res-status-badge">
+                                            <span class="w-2 h-2 rounded-full bg-[var(--status-verified-badge)]"></span>
+                                            <span id="res-status-text">FORMALLY VERIFIED: APPROVED</span>
+                                        </span>
                                     </div>
-                                    <span class="text-[11px] font-mono text-[#34785c] bg-[#edf5f0] border border-[#34785c] px-2 py-0.5">0.0% Escape Rate</span>
+                                    <div class="flex items-center space-x-2 font-mono text-xs">
+                                        <span class="badge-status badge-info" id="res-escape-badge">0.0% Contraindication Escape</span>
+                                    </div>
+                                </div>
+
+                                <!-- Patient Profile & Primary Diagnosis -->
+                                <div class="space-y-1">
+                                    <div class="flex items-center space-x-2 text-xs text-[var(--color-text-muted)] font-mono">
+                                        <span id="res-patient-profile">Patient: Robert Miller (PT_001) • Age: 68 • Male</span>
+                                    </div>
+                                    <div class="flex items-baseline justify-between pt-1">
+                                        <h2 class="font-display text-3xl text-[var(--color-text-primary)]" id="res-diagnosed-condition">Chronic Kidney Disease Stage 4</h2>
+                                        <span class="badge-status badge-info font-mono text-xs" id="res-icd10">ICD-10: N18.4</span>
+                                    </div>
+                                </div>
+
+                                <!-- Biomarkers Summary Strip -->
+                                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-[var(--color-border)] text-xs">
+                                    <div class="bg-[var(--bg-canvas)] p-2.5 rounded-[12px] border border-[var(--color-border)]">
+                                        <span class="text-[var(--color-text-muted)] block text-[11px]">eGFR Filtration</span>
+                                        <span class="font-mono text-sm font-medium text-[var(--color-text-primary)]" id="strip-egfr">22.0 mL/min</span>
+                                    </div>
+                                    <div class="bg-[var(--bg-canvas)] p-2.5 rounded-[12px] border border-[var(--color-border)]">
+                                        <span class="text-[var(--color-text-muted)] block text-[11px]">Blood Pressure</span>
+                                        <span class="font-mono text-sm font-medium text-[var(--color-text-primary)]" id="strip-bp">138/84 mmHg</span>
+                                    </div>
+                                    <div class="bg-[var(--bg-canvas)] p-2.5 rounded-[12px] border border-[var(--color-border)]">
+                                        <span class="text-[var(--color-text-muted)] block text-[11px]">Glycated HbA1c</span>
+                                        <span class="font-mono text-sm font-medium text-[var(--color-text-primary)]" id="strip-hba1c">9.2%</span>
+                                    </div>
+                                    <div class="bg-[var(--bg-canvas)] p-2.5 rounded-[12px] border border-[var(--color-border)]">
+                                        <span class="text-[var(--color-text-muted)] block text-[11px]">Creatinine</span>
+                                        <span class="font-mono text-sm font-medium text-[var(--color-text-primary)]" id="strip-creatinine">3.1 mg/dL</span>
+                                    </div>
                                 </div>
                             </div>
 
-                            <!-- Approved Medication Card -->
-                            <div class="paper-card p-4 space-y-2">
+                            <!-- APPROVED PRESCRIPTION REGIMEN CARD -->
+                            <div class="report-prescription-box">
                                 <div class="flex items-center justify-between">
-                                    <span class="text-xs font-medium text-[#26251e]">Formally Approved Medication</span>
-                                    <span class="text-[10px] font-mono text-[#84847e]">Zero Ontological Violations</span>
+                                    <span class="text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider">Formally Approved Prescription</span>
+                                    <span class="badge-status badge-verified text-[11px]">Tableaux Validated</span>
                                 </div>
-                                <div class="bg-[#f7f7f4] border border-[#cdcdc9] p-3 flex items-center justify-between">
-                                    <span class="text-base font-mono text-[#26251e]" id="res-recommended-treatment">Insulin (basal or prandial regimen)</span>
-                                    <span class="text-xs font-mono text-[#34785c]">HermiT Tableaux PASS</span>
+                                <div class="text-2xl font-light text-[var(--color-text-primary)] font-display" id="res-recommended-treatment">
+                                    Insulin (basal or prandial regimen)
+                                </div>
+                                <p class="text-xs text-[var(--color-text-secondary)] leading-relaxed pt-1" id="res-clinical-rationale">
+                                    Patient presents with concurrent Type 2 Diabetes and advanced CKD Stage 4. Metformin is contraindicated due to lactic acidosis risk. Subcutaneous Insulin is initiated as safe, effective glycemic control.
+                                </p>
+                            </div>
+
+                            <!-- CONTRAINDICATIONS INTERCEPTED & BLOCKED PANEL -->
+                            <div class="feature-card p-5 space-y-2.5" id="card-contraindications">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center space-x-2">
+                                        <span class="badge-status badge-contraindicated text-[11px]">Contraindications Intercepted</span>
+                                        <span class="text-xs text-[var(--color-text-primary)] font-medium">Medications Strictly Blocked</span>
+                                    </div>
+                                    <span class="text-[11px] font-mono text-[var(--color-text-muted)]" id="res-violations-count">0 Blocked</span>
+                                </div>
+                                <div class="space-y-2 text-xs" id="res-violations-list">
+                                    <!-- Populated dynamically with exact clinical danger avoided -->
                                 </div>
                             </div>
 
-                            <!-- Clinical Rationale Card -->
-                            <div class="paper-card p-4 space-y-2 text-xs">
-                                <span class="font-medium text-[#26251e]">Clinical Diagnostic Reasoning Narrative</span>
-                                <p class="text-[#26251e] bg-[#f7f7f4] border border-[#cdcdc9] p-3 leading-relaxed" id="res-clinical-rationale"></p>
-                                <div class="pt-1">
-                                    <span class="text-[#84847e] block mb-1.5">Differential Diagnoses Evaluated:</span>
+                            <!-- DIFFERENTIAL DIAGNOSES & CLINICAL GUIDELINES -->
+                            <div class="feature-card p-5 space-y-4 text-xs">
+                                <div>
+                                    <span class="text-[var(--color-text-muted)] block mb-2 font-medium">Differential Diagnoses Evaluated:</span>
                                     <div class="flex flex-wrap gap-1.5" id="res-differentials"></div>
                                 </div>
-                            </div>
 
-                            <!-- Formal DL Reasoner Gatekeeper Card -->
-                            <div class="paper-card p-4 space-y-3 text-xs">
-                                <div class="flex items-center justify-between border-b border-[#cdcdc9] pb-2">
-                                    <span class="font-medium text-[#26251e]">Description Logic Reasoner Gatekeeper</span>
-                                    <span class="text-[11px] font-mono text-[#84847e]" id="res-memory-isolation">Isolated In-Memory World</span>
-                                </div>
-                                <div class="bg-[#f7f7f4] border border-[#cdcdc9] p-3 font-mono text-xs text-[#26251e] leading-relaxed" id="res-proof-details"></div>
-                                <div class="grid grid-cols-2 gap-3 text-[11px] text-[#84847e]">
-                                    <div>Reasoning Engine: <span class="text-[#26251e]" id="res-reasoning-engine">HermiT OWL 2 DL Reasoner</span></div>
-                                    <div>Reasoner Latency: <span class="text-[#26251e] font-mono" id="res-reasoner-latency">0.40 ms</span></div>
+                                <div class="pt-3 border-t border-[var(--color-border)] space-y-2.5">
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-[var(--color-text-muted)] font-medium">Authoritative Clinical Guidelines Grounding:</span>
+                                        <span class="text-[11px] font-mono text-[var(--color-text-muted)]" id="res-guidelines-count">3 Citations</span>
+                                    </div>
+                                    <div class="space-y-2" id="res-guidelines-container"></div>
                                 </div>
                             </div>
 
-                            <!-- Retrieved Guidelines Excerpts -->
-                            <div class="paper-card p-4 space-y-3 text-xs">
-                                <div class="flex items-center justify-between">
-                                    <span class="font-medium text-[#26251e]">Retrieved Guidelines (Hybrid RRF k=60)</span>
-                                    <span class="text-[11px] font-mono text-[#84847e]" id="res-guidelines-count">3 Passages</span>
+                            <!-- COLLAPSIBLE FORMAL AUDIT PROVENANCE (TUCKED AWAY AT BOTTOM) -->
+                            <details class="audit-accordion">
+                                <summary>
+                                    <span class="flex items-center space-x-2">
+                                        <svg class="w-4 h-4 text-[var(--color-text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 9l-7 7-7-7"/></svg>
+                                        <span>System Provenance & Description Logic Tableaux Proof (HermiT Engine)</span>
+                                    </span>
+                                    <span class="text-[11px] font-mono text-[var(--color-text-muted)]" id="res-reasoner-latency">0.40 ms reasoner</span>
+                                </summary>
+                                <div class="audit-accordion-content space-y-3 bg-[var(--bg-canvas)]">
+                                    <div>
+                                        <span class="text-[var(--color-text-muted)] block mb-1 font-mono text-[11px]">Formal Tableaux Verification String:</span>
+                                        <div class="p-3 bg-[var(--bg-surface)] border border-[var(--color-border)] font-mono text-xs text-[var(--color-text-primary)] rounded-[10px]" id="res-proof-details">
+                                            Description Logic tableaux verified: 0 contradiction detected.
+                                        </div>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-3 text-[11px] font-mono text-[var(--color-text-muted)]">
+                                        <div>Reasoning Engine: <span class="text-[var(--color-text-primary)]" id="res-reasoning-engine">HermiT OWL 2 DL Reasoner</span></div>
+                                        <div>Memory Isolation: <span class="text-[var(--color-text-primary)]" id="res-memory-isolation">Ephemeral In-Memory World</span></div>
+                                    </div>
+                                    <div class="pt-2 border-t border-[var(--color-border)]">
+                                        <span class="text-[var(--color-text-muted)] block mb-1.5 font-mono text-[11px]">Chronological Execution Trace:</span>
+                                        <div class="space-y-1.5 font-mono text-[11px]" id="res-audit-trail-container"></div>
+                                    </div>
                                 </div>
-                                <div class="space-y-2.5" id="res-guidelines-container"></div>
-                            </div>
-
-                            <!-- Chronological Execution Audit Trail -->
-                            <div class="paper-card p-4 space-y-3 text-xs">
-                                <div class="flex items-center justify-between border-b border-[#cdcdc9] pb-2">
-                                    <span class="font-medium text-[#26251e]">Chronological LangGraph Audit Trail</span>
-                                    <span class="text-[11px] font-mono text-[#84847e]" id="res-trail-count">5 Steps</span>
-                                </div>
-                                <div class="space-y-1.5 font-mono text-[11px]" id="res-audit-trail-container"></div>
-                            </div>
+                            </details>
 
                         </div>
                     </div>
@@ -352,64 +386,64 @@
             </div>
 
             <!-- TAB: COHORT BENCHMARK (TABLE 8.3) -->
-            <div id="tab-benchmark" class="tab-content hidden paper-card p-6 space-y-5">
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#cdcdc9] pb-4">
+            <div id="tab-benchmark" class="tab-content hidden feature-card p-6 space-y-5">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[var(--color-border)] pb-4">
                     <div>
-                        <h2 class="font-serif text-2xl text-[#26251e]">Automated Cohort Safety Benchmark</h2>
-                        <p class="text-xs text-[#84847e] mt-0.5">Empirical validation over the six-patient cardiometabolic cohort (Phase-2 Synopsis Section 8.4).</p>
+                        <h2 class="font-display text-2xl text-[var(--color-text-primary)]">Automated Cohort Safety Benchmark</h2>
+                        <p class="text-xs text-[var(--color-text-muted)] mt-1">Multi-case cardiometabolic & pediatric evaluation (Phase-2 Synopsis Section 8.4).</p>
                     </div>
                     <button type="button" id="btn-run-benchmark" class="btn-primary text-xs">Run Benchmark</button>
                 </div>
 
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-                    <div class="bg-[#f7f7f4] border border-[#cdcdc9] p-3">
-                        <span class="text-[#84847e] block">1st-Pass Compliance</span>
-                        <span class="text-xl font-mono text-[#26251e] mt-1 block" id="bm-first-pass">100.0%</span>
+                    <div class="bg-[var(--bg-canvas)] border border-[var(--color-border)] p-4 rounded-[14px]">
+                        <span class="text-[var(--color-text-muted)] block">1st-Pass Compliance</span>
+                        <span class="text-xl font-mono text-[var(--color-text-primary)] mt-1 block" id="bm-first-pass">85.7%</span>
                     </div>
-                    <div class="bg-[#f7f7f4] border border-[#cdcdc9] p-3">
-                        <span class="text-[#84847e] block">Escape Rate</span>
-                        <span class="text-xl font-mono text-[#34785c] mt-1 block" id="bm-escape-rate">0.0%</span>
+                    <div class="bg-[var(--bg-canvas)] border border-[var(--color-border)] p-4 rounded-[14px]">
+                        <span class="text-[var(--color-text-muted)] block">Escape Rate</span>
+                        <span class="text-xl font-mono text-[var(--status-verified-text)] mt-1 block" id="bm-escape-rate">0.0%</span>
                     </div>
-                    <div class="bg-[#f7f7f4] border border-[#cdcdc9] p-3">
-                        <span class="text-[#84847e] block">Clinical Safety</span>
-                        <span class="text-xl font-mono text-[#34785c] mt-1 block" id="bm-safe-rate">100.0%</span>
+                    <div class="bg-[var(--bg-canvas)] border border-[var(--color-border)] p-4 rounded-[14px]">
+                        <span class="text-[var(--color-text-muted)] block">Clinical Safety</span>
+                        <span class="text-xl font-mono text-[var(--status-verified-text)] mt-1 block" id="bm-safe-rate">100.0%</span>
                     </div>
-                    <div class="bg-[#f7f7f4] border border-[#cdcdc9] p-3">
-                        <span class="text-[#84847e] block">Execution Time</span>
-                        <span class="text-xl font-mono text-[#26251e] mt-1 block" id="bm-runtime">&lt; 0.05s</span>
+                    <div class="bg-[var(--bg-canvas)] border border-[var(--color-border)] p-4 rounded-[14px]">
+                        <span class="text-[var(--color-text-muted)] block">Execution Time</span>
+                        <span class="text-xl font-mono text-[var(--color-text-primary)] mt-1 block" id="bm-runtime">&lt; 0.05s</span>
                     </div>
                 </div>
 
-                <div class="overflow-x-auto border border-[#cdcdc9]">
+                <div class="overflow-x-auto border border-[var(--color-border)] rounded-[14px]">
                     <table class="w-full text-xs text-left">
-                        <thead class="bg-[#f2f1ed] text-[#7a7974] font-mono border-b border-[#cdcdc9]">
+                        <thead class="bg-[var(--bg-canvas)] text-[var(--color-text-muted)] font-mono border-b border-[var(--color-border)]">
                             <tr>
-                                <th class="p-2.5">Patient ID</th>
-                                <th class="p-2.5">Conditions</th>
-                                <th class="p-2.5">Outcome</th>
-                                <th class="p-2.5">Attempts</th>
-                                <th class="p-2.5">Approved Drug</th>
+                                <th class="p-3">Patient ID</th>
+                                <th class="p-3">Conditions</th>
+                                <th class="p-3">Outcome</th>
+                                <th class="p-3">Attempts</th>
+                                <th class="p-3">Approved Drug</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-[#cdcdc9] bg-[#f7f7f4]" id="benchmark-tbody"></tbody>
+                        <tbody class="divide-y divide-[var(--color-border)] bg-[var(--bg-surface)]" id="benchmark-tbody"></tbody>
                     </table>
                 </div>
             </div>
 
-            <!-- TAB: DIAGNOSTIC AXIOMS (OWL) -->
-            <div id="tab-axioms" class="tab-content hidden paper-card p-6 space-y-4">
-                <div class="border-b border-[#cdcdc9] pb-3">
-                    <h2 class="font-serif text-2xl text-[#26251e]">Formal Description Logic Safety Axioms</h2>
-                    <p class="text-xs text-[#84847e] mt-0.5">Cardiometabolic contraindications enforced via OWL 2 DL (HermiT reasoner).</p>
+            <!-- TAB: SAFETY AXIOMS (OWL DL) -->
+            <div id="tab-axioms" class="tab-content hidden feature-card p-6 space-y-4">
+                <div class="border-b border-[var(--color-border)] pb-3">
+                    <h2 class="font-display text-2xl text-[var(--color-text-primary)]">Formal Description Logic Safety Axioms</h2>
+                    <p class="text-xs text-[var(--color-text-muted)] mt-1">Adult, pediatric, and rare contraindications strictly enforced via OWL 2 DL reasoner.</p>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="axioms-cards-container"></div>
             </div>
 
             <!-- TAB: CLINICAL GUIDELINES -->
-            <div id="tab-guidelines" class="tab-content hidden paper-card p-6 space-y-4">
-                <div class="border-b border-[#cdcdc9] pb-3">
-                    <h2 class="font-serif text-2xl text-[#26251e]">Authoritative Clinical Guidelines Corpus</h2>
-                    <p class="text-xs text-[#84847e] mt-0.5">Indexed KDIGO, ADA, and ACC/AHA clinical practice recommendations for hybrid RRF retrieval.</p>
+            <div id="tab-guidelines" class="tab-content hidden feature-card p-6 space-y-4">
+                <div class="border-b border-[var(--color-border)] pb-3">
+                    <h2 class="font-display text-2xl text-[var(--color-text-primary)]">Clinical Practice Guidelines Corpus</h2>
+                    <p class="text-xs text-[var(--color-text-muted)] mt-1">Indexed KDIGO 2023, ADA 2024, ACC/AHA, and ISPAD 2024 Pediatric recommendations for hybrid RRF retrieval.</p>
                 </div>
                 <div class="space-y-3" id="guidelines-full-list"></div>
             </div>
@@ -420,59 +454,59 @@
         <!-- VIEW 2: PATIENT ASSISTANT (CHATBOT UI)     -->
         <!-- ========================================== -->
         <div id="view-patient" class="hidden max-w-3xl mx-auto w-full">
-            <div class="paper-card chat-container p-0 overflow-hidden">
+            <div class="chat-container">
                 
                 <!-- Chat Header -->
-                <div class="p-4 border-b border-[#cdcdc9] bg-[#f2f1ed] flex items-center justify-between">
+                <div class="p-4 border-b border-[var(--color-border)] bg-[var(--bg-surface-elevated)] flex items-center justify-between">
                     <div>
-                        <h2 class="font-serif text-lg text-[#26251e]">SafeCDS Health Assistant</h2>
-                        <p class="text-[11px] text-[#84847e]">Grounded clinical advice with formal Description Logic safety verification</p>
+                        <h2 class="font-display text-xl text-[var(--color-text-primary)]">SafeCDS Health Assistant</h2>
+                        <p class="text-[11px] text-[var(--color-text-muted)]">Conversational guidance backed by formal Description Logic safety verification</p>
                     </div>
-                    <div class="flex items-center space-x-1.5 text-[11px] font-mono text-[#34785c]">
-                        <span class="w-2 h-2 rounded-full bg-[#34785c]"></span>
+                    <div class="flex items-center space-x-1.5 text-[11px] font-mono text-[var(--status-verified-text)]">
+                        <span class="w-2 h-2 rounded-full bg-[var(--status-verified-badge)]"></span>
                         <span>HermiT Verified</span>
                     </div>
                 </div>
 
                 <!-- Chat Messages Feed -->
-                <div id="chat-messages" class="flex-1 overflow-y-auto p-5 space-y-4 bg-[#f7f7f4]">
+                <div id="chat-messages" class="flex-1 overflow-y-auto p-5 space-y-4 bg-[var(--bg-canvas)]">
                     <!-- Welcome message -->
                     <div class="chat-bubble chat-bubble-assistant">
-                        <p>Hello! I am your SafeCDS health assistant. I can help evaluate your cardiometabolic symptoms, lab values, or answer questions about conditions like Type 2 Diabetes, High Blood Pressure, and Kidney Disease.</p>
-                        <p class="text-xs text-[#7a7974] mt-2">Every recommendation is checked against formal medical safety rules so contraindicated drugs are never approved.</p>
+                        <p>Hello! I am your SafeCDS health assistant. I can help evaluate cardiometabolic symptoms, lab results, or answer questions about conditions like Diabetes (Type 1 and 2), High Blood Pressure, and Kidney Disease.</p>
+                        <p class="text-xs text-[var(--color-text-muted)] mt-2">Every recommendation is checked against formal medical safety rules so contraindicated drugs are never suggested.</p>
                     </div>
 
                     <!-- Prompt Starters -->
                     <div class="pt-2">
-                        <span class="text-[11px] text-[#84847e] block mb-2">Common questions you can ask:</span>
+                        <span class="text-[11px] text-[var(--color-text-muted)] block mb-2 font-medium">Common questions:</span>
                         <div class="flex flex-wrap gap-2" id="prompt-starters">
-                            <button type="button" class="prompt-pill" data-prompt="I have Type 2 Diabetes and my doctor mentioned my eGFR kidney function is 22. What medicines are safe for me?">I have Diabetes & Kidney Stage 4. What is safe?</button>
-                            <button type="button" class="prompt-pill" data-prompt="Why is Metformin unsafe when kidney function is low?">Why is Metformin unsafe for CKD?</button>
-                            <button type="button" class="prompt-pill" data-prompt="I have high blood pressure and kidney disease. Is Lisinopril safe for me?">Is Lisinopril safe for advanced kidney disease?</button>
+                            <button type="button" class="prompt-pill" data-prompt="I have Type 2 Diabetes and my eGFR kidney function is 22. What medicines are safe for me?">I have Diabetes & Kidney Stage 4. What is safe?</button>
+                            <button type="button" class="prompt-pill" data-prompt="My 14-year-old adolescent has Type 1 Diabetes and kidney protein. Can they take Metformin?">Is Metformin safe for adolescent diabetes?</button>
+                            <button type="button" class="prompt-pill" data-prompt="Why is Lisinopril unsafe in advanced kidney disease?">Why is Lisinopril unsafe in Stage 5 CKD?</button>
                         </div>
                     </div>
                 </div>
 
                 <!-- Attached File Pill (when PDF is uploaded in chat) -->
-                <div id="chat-attached-pill" class="hidden px-4 py-1.5 bg-[#e6e5e0] border-t border-[#cdcdc9] flex items-center justify-between text-xs">
-                    <span class="font-mono text-[#26251e] truncate" id="chat-filename">report.pdf</span>
-                    <button type="button" id="btn-remove-chat-file" class="text-[#7a7974] hover:text-[#26251e] ml-2">&times;</button>
+                <div id="chat-attached-pill" class="hidden px-4 py-1.5 bg-[var(--bg-surface-alt)] border-t border-[var(--color-border)] flex items-center justify-between text-xs">
+                    <span class="font-mono text-[var(--color-text-primary)] truncate" id="chat-filename">report.pdf</span>
+                    <button type="button" id="btn-remove-chat-file" class="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] ml-2">&times;</button>
                 </div>
 
                 <!-- Chat Input Bar -->
-                <div class="p-3 border-t border-[#cdcdc9] bg-[#f2f1ed]">
+                <div class="p-3 border-t border-[var(--color-border)] bg-[var(--bg-surface-elevated)]">
                     <form id="chat-form" class="flex items-center space-x-2">
                         <!-- PDF attach button -->
-                        <button type="button" id="btn-chat-upload-pdf" title="Attach Medical Report PDF" class="btn-secondary px-2.5 py-2 text-xs">
-                            <svg class="w-4 h-4 text-[#7a7974]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
+                        <button type="button" id="btn-chat-upload-pdf" title="Attach Medical Report PDF" class="btn-secondary px-3 py-2 text-xs">
+                            <svg class="w-4 h-4 text-[var(--color-text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
                         </button>
                         <input type="file" id="chat-pdf-file-input" accept=".pdf" class="hidden">
 
                         <!-- Text input -->
-                        <input type="text" id="chat-input" placeholder="Type your symptoms or health question..." class="flex-1 text-xs py-2 px-3 bg-[#f7f7f4]">
+                        <input type="text" id="chat-input" placeholder="Type your symptoms, lab values, or health question..." class="flex-1 text-xs py-2.5 px-3.5 bg-[var(--bg-canvas)]">
 
                         <!-- Send button -->
-                        <button type="submit" id="btn-chat-send" class="btn-primary py-2 px-4 text-xs">
+                        <button type="submit" id="btn-chat-send" class="btn-primary py-2.5 px-5 text-xs">
                             <span>Send</span>
                             <span>→</span>
                         </button>
@@ -485,8 +519,8 @@
     </main>
 
     <!-- FOOTER -->
-    <footer class="border-t border-[#cdcdc9] py-3 bg-[#f7f7f4] text-[#84847e] text-xs">
-        <div class="max-w-[1300px] mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-1">
+    <footer class="border-t border-[var(--color-border)] py-3 bg-[var(--bg-canvas)] text-[var(--color-text-muted)] text-xs">
+        <div class="max-w-[1320px] mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-1">
             <span>SafeCDS Major Project Phase-2 • Visvesvaraya Technological University (2026-27)</span>
             <span class="font-mono text-[11px]">NMIT AI & ML Dept.</span>
         </div>

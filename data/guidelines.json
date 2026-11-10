@@ -52,5 +52,17 @@
     "source": "KDIGO 2023 Cardiometabolic Consensus",
     "topic": "Potassium Homeostasis & Renoprotection",
     "text": "Serum potassium exceeding 5.0 mEq/L mandates review of potassium-sparing medications and RAAS inhibitors. In CKD Stages 4-5, hyperkalemia risk escalates exponentially with Lisinopril, making Amlodipine the optimal non-potassium-affecting vasodilator."
+  },
+  {
+    "id": "ISPAD_GLY_2024_PEDS",
+    "source": "ISPAD 2024 Pediatric Diabetes Clinical Practice Consensus",
+    "topic": "Pediatric Diabetic Nephropathy & Glycemic Safety",
+    "text": "In children and adolescents with Type 1 Diabetes and early nephropathy, intensive basal-bolus insulin or pump therapy is mandatory. Adult oral antidiabetic agents (including Metformin and SGLT2 inhibitors) are not recommended or cleared for pediatric nephropathy due to variable pharmacokinetics, severe lactic acidosis, and diabetic ketoacidosis risks. Target HbA1c is < 7.0% using tailored pediatric insulin titration."
+  },
+  {
+    "id": "KDIGO_PEDS_CKD_2023",
+    "source": "KDIGO 2023 Pediatric CKD Guideline",
+    "topic": "Bedside Schwartz Formula & Pediatric Staging",
+    "text": "For patients under age 18, kidney function must be assessed via the updated bedside Schwartz formula: eGFR = 0.413 * Height(cm) / Serum Creatinine(mg/dL). When eGFR drops below 60 mL/min/1.73m2, strict avoidance of adult oral nephrotoxic or clearance-dependent agents is required, and pediatric nephrology consultation with individualized insulin or calcium channel blocker dosing must be initiated."
   }
 ]

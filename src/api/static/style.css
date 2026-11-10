@@ -1,297 +1,572 @@
-/* SafeCDS Editorial Design System (Cursor Parchment Style & Vibbudu Aesthetics) */
-@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+/* ==========================================================================
+   SafeCDS Clinical Decision Support System — Design Tokens & Stylesheet
+   Theme 1 (Light / Default): ElevenLabs Bauhaus Warm Cream Editorial
+   Theme 2 (Dark / Toggle): Linear Midnight Precision Instrument
+   ========================================================================== */
 
-:root {
-  /* Colors */
-  --color-parchment: #f7f7f4;
-  --color-bone: #f2f1ed;
-  --color-linen: #e6e5e0;
-  --color-stone: #cdcdc9;
-  --color-mist: #a1a19f;
-  --color-driftwood: #84847e;
-  --color-ash: #7a7974;
-  --color-ink: #26251e;
-  --color-ember: #f54e00;
-  --color-amber: #c08532;
-  --color-forest: #34785c;
-  --color-verdant: #1f8a65;
-  --color-crimson: #cf2d56;
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
 
-  /* Typography */
-  --font-serif: 'Instrument Serif', Georgia, serif;
-  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+/* ==========================================================================
+   1. ROOT VARIABLES — ELEVENLABS LIGHT THEME (DEFAULT)
+   ========================================================================== */
+:root,
+body.theme-light {
+  /* Canvas & Surfaces */
+  --bg-canvas: #fdfcfc;           /* Eggshell canvas: warm off-white, paper calm */
+  --bg-surface: #f5f3f1;          /* Warm taupe: primary card surface level */
+  --bg-surface-hover: #ece9e5;    /* Interactive taupe hover */
+  --bg-surface-elevated: #ffffff; /* Elevated white card surface */
+  --bg-surface-alt: #ebe8e4;      /* Stone plate / subtle secondary */
+  
+  /* Hairline Borders & Dividers */
+  --border-hairline: 1px solid #ebe8e4;
+  --border-hairline-strong: 1px solid #dcd7cf;
+  --color-border: #ebe8e4;
+  --color-border-hover: #000000;
 
-  /* Radius & Borders */
-  --radius: 4px;
-  --border-hairline: 1px solid var(--color-stone);
-  --border-subtle: 1px solid color-mix(in oklab, var(--color-ink) 8%, transparent);
+  /* Typography Colors */
+  --color-text-primary: #000000;    /* Ink: pure black high contrast anchor */
+  --color-text-secondary: #44403b;  /* Graphite: strong secondary / labels */
+  --color-text-muted: #777169;      /* Smoke: dominant quiet readable body */
+  --color-text-caption: #a59f97;    /* Ash: tertiary footnotes */
 
-  /* Shadows (Warm paper elevation) */
-  --shadow-card: rgba(0, 0, 0, 0.05) 0px 4px 12px 0px, oklab(0.263 -0.002 0.012 / 0.08) 0px 0px 0px 1px;
-  --shadow-popover: 0 4px 20px -2px rgba(38, 37, 30, 0.08);
+  /* Action Buttons */
+  --btn-primary-bg: #000000;
+  --btn-primary-text: #ffffff;
+  --btn-primary-border: 1px solid #000000;
+  --btn-secondary-bg: #ffffff;
+  --btn-secondary-text: #000000;
+  --btn-secondary-border: 1px solid #ebe8e4;
+
+  /* Product Visual Accents (Restrained) */
+  --accent-violet: #0447ff;         /* Violet Spark */
+  --accent-ember: #ff4704;          /* Ember Orange */
+  --accent-primary-cta: #000000;
+  --accent-active-pill: #000000;
+  --accent-active-pill-text: #ffffff;
+
+  /* Clinical Status Tokens */
+  --status-verified-bg: #eef8f2;
+  --status-verified-text: #1b663e;
+  --status-verified-border: #bfe5cf;
+  --status-verified-badge: #1b663e;
+
+  --status-contraindicated-bg: #fff1f2;
+  --status-contraindicated-text: #b91c1c;
+  --status-contraindicated-border: #fecdd3;
+
+  --status-warning-bg: #fffbeb;
+  --status-warning-text: #b45309;
+  --status-warning-border: #fde68a;
+
+  --status-info-bg: #f5f3f1;
+  --status-info-text: #44403b;
+  --status-info-border: #ebe8e4;
+
+  /* Radii (ElevenLabs: generous 20px/24px cards, 9999px pills) */
+  --radius-card: 20px;
+  --radius-large-card: 24px;
+  --radius-button: 9999px;
+  --radius-pill: 9999px;
+  --radius-input: 8px;
+
+  /* Elevation Shadows */
+  --shadow-subtle: rgba(0, 0, 0, 0.4) 0px 0px 1px 0px, rgba(0, 0, 0, 0.04) 0px 1px 2px 0px;
+  --shadow-elevated: rgba(0, 0, 0, 0.06) 0px 4px 16px -2px, rgba(0, 0, 0, 0.04) 0px 0px 0px 1px;
 }
 
-/* Base Resets */
+/* ==========================================================================
+   2. ROOT VARIABLES — LINEAR MIDNIGHT DARK THEME
+   ========================================================================== */
+body.theme-dark {
+  /* Canvas & Surfaces */
+  --bg-canvas: #08090a;           /* Void: deep midnight canvas */
+  --bg-surface: #0f1011;          /* Carbon: container surface */
+  --bg-surface-hover: #161718;    /* Interactive carbon hover */
+  --bg-surface-elevated: #161718; /* Obsidian: elevated panel */
+  --bg-surface-alt: #1a1c1e;      /* Slate plate */
+
+  /* Hairline Borders & Dividers */
+  --border-hairline: 1px solid #23252a;
+  --border-hairline-strong: 1px solid #383b3f;
+  --color-border: #23252a;
+  --color-border-hover: #d0d6e0;
+
+  /* Typography Colors */
+  --color-text-primary: #ffffff;    /* Paper: crisp white */
+  --color-text-secondary: #d0d6e0;  /* Mist: secondary headings */
+  --color-text-muted: #8a8f98;      /* Fog: body description */
+  --color-text-caption: #62666d;    /* Ash: tertiary microcopy */
+
+  /* Action Buttons (Linear Acid-Lime Accent) */
+  --btn-primary-bg: #e4f222;        /* Acid Lime CTA */
+  --btn-primary-text: #08090a;
+  --btn-primary-border: 1px solid #e4f222;
+  --btn-secondary-bg: #161718;
+  --btn-secondary-text: #d0d6e0;
+  --btn-secondary-border: 1px solid #23252a;
+
+  /* Product Visual Accents */
+  --accent-violet: #6366f1;         /* Iris Violet */
+  --accent-ember: #ff4704;          /* Ember */
+  --accent-primary-cta: #e4f222;    /* Acid Lime */
+  --accent-active-pill: #e4f222;
+  --accent-active-pill-text: #08090a;
+
+  /* Clinical Status Tokens */
+  --status-verified-bg: rgba(39, 166, 68, 0.12);
+  --status-verified-text: #27a644;   /* Pulse Green */
+  --status-verified-border: rgba(39, 166, 68, 0.35);
+  --status-verified-badge: #27a644;
+
+  --status-contraindicated-bg: rgba(235, 87, 87, 0.12);
+  --status-contraindicated-text: #eb5757; /* Coral Red */
+  --status-contraindicated-border: rgba(235, 87, 87, 0.35);
+
+  --status-warning-bg: rgba(245, 158, 11, 0.12);
+  --status-warning-text: #f59e0b;
+  --status-warning-border: rgba(245, 158, 11, 0.35);
+
+  --status-info-bg: #161718;
+  --status-info-text: #d0d6e0;
+  --status-info-border: #23252a;
+
+  /* Radii (Linear: precision machined 12px cards, 6px buttons, 9999px pills) */
+  --radius-card: 14px;
+  --radius-large-card: 16px;
+  --radius-button: 9999px;
+  --radius-pill: 9999px;
+  --radius-input: 6px;
+
+  /* Elevation Shadows */
+  --shadow-subtle: 0 0 0 1px #23252a;
+  --shadow-elevated: rgba(0, 0, 0, 0.6) 0px 4px 24px 0px, 0 0 0 1px #23252a;
+}
+
+/* ==========================================================================
+   3. BASE RESETS & TYPOGRAPHY
+   ========================================================================= */
 *, *::before, *::after {
   box-sizing: border-box;
 }
 
 body {
-  background-color: var(--color-parchment);
-  color: var(--color-ink);
-  font-family: var(--font-sans);
+  background-color: var(--bg-canvas);
+  color: var(--color-text-primary);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
   margin: 0;
   padding: 0;
-  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 200ms ease, color 200ms ease;
 }
 
-::selection {
-  background-color: #8bc4f8;
-  color: var(--color-ink);
-}
-
-/* Typography Utilities */
-.font-serif {
-  font-family: var(--font-serif);
-  font-weight: 400;
+/* Whisper-weight Display Headlines (ElevenLabs 300 / Linear -0.02em) */
+.font-display {
+  font-weight: 300;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
 }
 
 .font-mono {
-  font-family: var(--font-mono);
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
   font-feature-settings: "tnum";
 }
 
 h1, h2, h3, h4 {
-  font-weight: 400;
-  color: var(--color-ink);
+  font-weight: 300;
+  color: var(--color-text-primary);
   margin: 0;
+  letter-spacing: -0.02em;
 }
 
-h1 {
-  letter-spacing: -0.025em;
+h1 { font-size: 28px; }
+h2 { font-size: 22px; }
+h3 { font-size: 16px; font-weight: 400; }
+h4 { font-size: 14px; font-weight: 500; }
+
+a {
+  color: inherit;
+  text-decoration: none;
 }
 
-h2 {
-  letter-spacing: -0.018em;
+/* ==========================================================================
+   4. CARDS & SURFACES
+   ========================================================================= */
+.feature-card {
+  background-color: var(--bg-surface);
+  border: var(--border-hairline);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-subtle);
+  transition: background-color 200ms ease, border-color 200ms ease, box-shadow 200ms ease;
 }
 
-h3 {
-  letter-spacing: -0.012em;
+.feature-card-elevated {
+  background-color: var(--bg-surface-elevated);
+  border: var(--border-hairline);
+  border-radius: var(--radius-large-card);
+  box-shadow: var(--shadow-elevated);
+  transition: background-color 200ms ease, border-color 200ms ease, box-shadow 200ms ease;
 }
 
-/* All UI corners are strictly 4px */
-.rounded-card,
-.card,
-button,
-input,
-select,
-textarea,
-.step-chip,
-.badge-tag,
-.chip {
-  border-radius: var(--radius) !important;
-}
-
-/* Buttons */
+/* ==========================================================================
+   5. BUTTONS & PILLS (9999px ROUNDED)
+   ========================================================================= */
 .btn-primary {
-  background-color: var(--color-ink);
-  color: var(--color-parchment);
-  border: none;
-  border-radius: var(--radius);
-  padding: 8px 16px;
-  font-size: 13px;
-  font-weight: 400;
+  background-color: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
+  border: var(--btn-primary-border);
+  border-radius: var(--radius-button);
+  padding: 9px 18px;
+  font-size: 13.5px;
+  font-weight: 500;
   cursor: pointer;
-  transition: opacity 150ms ease;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 8px;
+  transition: opacity 150ms ease, transform 100ms ease;
 }
 
 .btn-primary:hover {
   opacity: 0.9;
 }
 
+.btn-primary:active {
+  transform: scale(0.98);
+}
+
 .btn-secondary {
-  background-color: var(--color-linen);
-  color: var(--color-ink);
-  border: 1px solid var(--color-stone);
-  border-radius: var(--radius);
-  padding: 7px 14px;
+  background-color: var(--btn-secondary-bg);
+  color: var(--btn-secondary-text);
+  border: var(--btn-secondary-border);
+  border-radius: var(--radius-button);
+  padding: 8px 16px;
   font-size: 13px;
-  font-weight: 400;
+  font-weight: 500;
   cursor: pointer;
-  transition: background-color 150ms ease;
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  transition: background-color 150ms ease, border-color 150ms ease;
 }
 
 .btn-secondary:hover {
-  background-color: #deddd8;
+  background-color: var(--bg-surface-hover);
+  border-color: var(--color-border-hover);
 }
 
-.btn-ghost {
-  background: transparent;
-  color: var(--color-driftwood);
-  border: 1px solid transparent;
-  border-radius: var(--radius);
-  padding: 6px 12px;
-  font-size: 13px;
-  cursor: pointer;
-  transition: color 150ms ease, border-color 150ms ease;
-}
-
-.btn-ghost:hover {
-  color: var(--color-ink);
-  border-color: var(--color-stone);
-}
-
-/* Segmented View Switcher (Clinician vs Patient) */
-.view-switcher {
-  display: flex;
-  background-color: var(--color-linen);
-  padding: 2px;
-  border: 1px solid var(--color-stone);
-  border-radius: var(--radius);
-}
-
-.view-btn {
+.btn-pill {
+  border-radius: var(--radius-pill);
   padding: 5px 12px;
   font-size: 12px;
   font-weight: 500;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+/* ==========================================================================
+   6. HEADER & NAVIGATION
+   ========================================================================= */
+.app-header {
+  background-color: var(--bg-canvas);
+  border-bottom: var(--border-hairline);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  backdrop-filter: blur(8px);
+}
+
+.view-switcher-pill {
+  display: inline-flex;
+  background-color: var(--bg-surface);
+  border: var(--border-hairline);
+  border-radius: var(--radius-pill);
+  padding: 3px;
+}
+
+.view-btn {
+  padding: 6px 14px;
+  font-size: 12.5px;
+  font-weight: 500;
+  border-radius: var(--radius-pill);
   border: none;
   background: transparent;
-  color: var(--color-driftwood);
+  color: var(--color-text-muted);
   cursor: pointer;
-  border-radius: calc(var(--radius) - 1px) !important;
-  transition: background-color 150ms ease, color 150ms ease;
+  transition: all 150ms ease;
 }
 
 .view-btn.active {
-  background-color: var(--color-bone);
-  color: var(--color-ink);
-  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+  background-color: var(--accent-active-pill);
+  color: var(--accent-active-pill-text);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
-/* Nav Tabs */
-.nav-tab {
-  padding-bottom: 8px;
-  font-size: 13px;
-  color: var(--color-driftwood);
-  background: none;
-  border: none;
-  border-bottom: 2px solid transparent;
+.theme-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: var(--bg-surface);
+  border: var(--border-hairline);
+  color: var(--color-text-primary);
+  border-radius: var(--radius-pill);
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
   cursor: pointer;
-  transition: color 150ms ease, border-color 150ms ease;
+  transition: background-color 150ms ease;
+}
+
+.theme-toggle-btn:hover {
+  background-color: var(--bg-surface-hover);
+}
+
+/* Sub-nav Tabs */
+.nav-tab {
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--color-text-muted);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: color 150ms ease, background-color 150ms ease;
 }
 
 .nav-tab:hover {
-  color: var(--color-ink);
+  color: var(--color-text-primary);
+  background-color: var(--bg-surface);
 }
 
 .nav-tab.active-tab {
-  color: var(--color-ink);
-  border-bottom-color: var(--color-ink);
+  color: var(--color-text-primary);
+  background-color: var(--bg-surface);
   font-weight: 500;
+  box-shadow: 0 0 0 1px var(--color-border);
 }
 
-/* Paper Cards */
-.paper-card {
-  background-color: var(--color-bone);
-  border: 1px solid var(--color-stone);
-  box-shadow: var(--shadow-card);
-  border-radius: var(--radius);
-}
-
-/* Form Inputs */
+/* ==========================================================================
+   7. FORM INPUTS & SLIDERS
+   ========================================================================= */
 input[type="text"],
 input[type="number"],
+input[type="password"],
 select,
 textarea {
-  background-color: var(--color-parchment);
-  color: var(--color-ink);
-  border: 1px solid var(--color-stone);
-  border-radius: var(--radius);
-  padding: 8px 10px;
+  background-color: var(--bg-surface);
+  color: var(--color-text-primary);
+  border: var(--border-hairline);
+  border-radius: var(--radius-input);
+  padding: 9px 12px;
   font-size: 13px;
   font-family: inherit;
   outline: none;
-  transition: border-color 150ms ease;
+  transition: border-color 150ms ease, background-color 150ms ease;
 }
 
 input:focus,
 select:focus,
 textarea:focus {
-  border-color: var(--color-ink);
+  border-color: var(--color-border-hover);
+  background-color: var(--bg-canvas);
 }
 
-/* Range slider */
-input[type=range] {
+/* Range Slider */
+input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
+  width: 100%;
   height: 4px;
-  background: var(--color-stone);
-  border-radius: var(--radius);
+  background: var(--bg-surface-alt);
+  border-radius: 9999px;
   outline: none;
 }
 
-input[type=range]::-webkit-slider-thumb {
+input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 14px;
-  height: 14px;
-  border-radius: var(--radius);
-  background: var(--color-ink);
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-text-primary);
   cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  transition: transform 100ms ease;
 }
 
-/* Pipeline Stepper */
-.step-chip {
-  display: flex;
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+
+/* ==========================================================================
+   8. CLINICAL STATUS BADGES & CHIPS
+   ========================================================================= */
+.badge-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  font-size: 11.5px;
+  font-weight: 500;
+  border-radius: var(--radius-pill);
+}
+
+.badge-verified {
+  background-color: var(--status-verified-bg);
+  color: var(--status-verified-text);
+  border: 1px solid var(--status-verified-border);
+}
+
+.badge-contraindicated {
+  background-color: var(--status-contraindicated-bg);
+  color: var(--status-contraindicated-text);
+  border: 1px solid var(--status-contraindicated-border);
+}
+
+.badge-warning {
+  background-color: var(--status-warning-bg);
+  color: var(--status-warning-text);
+  border: 1px solid var(--status-warning-border);
+}
+
+.badge-info {
+  background-color: var(--status-info-bg);
+  color: var(--status-info-text);
+  border: 1px solid var(--status-info-border);
+}
+
+/* Condition select chips */
+.condition-chip {
+  display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 10px;
-  font-size: 11px;
-  color: var(--color-driftwood);
-  background-color: var(--color-bone);
-  border: 1px solid var(--color-stone);
+  padding: 5px 12px;
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  background-color: var(--bg-surface);
+  border: var(--border-hairline);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all 150ms ease;
 }
 
-.step-chip .step-num {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  color: var(--color-ash);
+.condition-chip:hover {
+  border-color: var(--color-text-primary);
+  color: var(--color-text-primary);
 }
 
-.step-chip.active {
-  border-color: var(--color-amber);
-  color: var(--color-ink);
-  background-color: #f7eedf;
+.condition-chip input:checked + span {
+  font-weight: 500;
+  color: var(--color-text-primary);
 }
 
-.step-chip.completed {
-  border-color: var(--color-forest);
-  color: var(--color-forest);
-  background-color: #edf5f0;
+/* Cohort Preset Button */
+.cohort-pill-btn {
+  background-color: var(--bg-surface);
+  border: var(--border-hairline);
+  border-radius: var(--radius-pill);
+  padding: 7px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: all 150ms ease;
 }
 
-.step-chip.failed {
-  border-color: var(--color-crimson);
-  color: var(--color-crimson);
-  background-color: #fcf0f2;
+.cohort-pill-btn:hover {
+  background-color: var(--bg-surface-hover);
+  border-color: var(--color-border-hover);
 }
 
-/* Chatbot Styles */
+.cohort-pill-btn.active {
+  background-color: var(--accent-active-pill);
+  color: var(--accent-active-pill-text);
+  border-color: var(--accent-active-pill);
+}
+
+/* ==========================================================================
+   9. CLINICAL CONSULTATION REPORT (HIGH-VISIBILITY DESIGN)
+   ========================================================================= */
+.report-hero-card {
+  background-color: var(--bg-surface);
+  border: var(--border-hairline);
+  border-radius: var(--radius-large-card);
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+.report-prescription-box {
+  background-color: var(--bg-surface-elevated);
+  border: var(--border-hairline);
+  border-radius: var(--radius-card);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Collapsible Formal Audit Accordion */
+.audit-accordion {
+  background-color: var(--bg-surface);
+  border: var(--border-hairline);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  transition: border-color 150ms ease;
+}
+
+.audit-accordion summary {
+  padding: 14px 18px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.audit-accordion summary::-webkit-details-marker {
+  display: none;
+}
+
+.audit-accordion summary:hover {
+  color: var(--color-text-primary);
+}
+
+.audit-accordion[open] summary {
+  border-bottom: var(--border-hairline);
+  color: var(--color-text-primary);
+}
+
+.audit-accordion-content {
+  padding: 18px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+/* ==========================================================================
+   10. CHATBOT ASSISTANT VIEW (PATIENT ASSISTANT)
+   ========================================================================= */
 .chat-container {
   height: calc(100vh - 190px);
   min-height: 520px;
   display: flex;
   flex-direction: column;
+  border-radius: var(--radius-large-card);
+  overflow: hidden;
+  border: var(--border-hairline);
+  background-color: var(--bg-surface);
 }
 
 .chat-bubble {
@@ -299,37 +574,29 @@ input[type=range]::-webkit-slider-thumb {
   padding: 14px 18px;
   font-size: 13.5px;
   line-height: 1.6;
-  border-radius: var(--radius);
-  border: 1px solid var(--color-stone);
+  border-radius: 18px;
+  border: var(--border-hairline);
 }
 
 .chat-bubble-user {
-  background-color: var(--color-linen);
-  color: var(--color-ink);
+  background-color: var(--bg-surface-elevated);
+  color: var(--color-text-primary);
   align-self: flex-end;
-  border-color: #d6d5ce;
+  border-bottom-right-radius: 4px;
 }
 
 .chat-bubble-assistant {
-  background-color: var(--color-bone);
-  color: var(--color-ink);
+  background-color: var(--bg-surface-elevated);
+  color: var(--color-text-primary);
   align-self: flex-start;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.03);
-}
-
-.chat-bubble-assistant p {
-  margin: 0 0 10px 0;
-}
-
-.chat-bubble-assistant p:last-child {
-  margin-bottom: 0;
+  border-bottom-left-radius: 4px;
+  box-shadow: var(--shadow-subtle);
 }
 
 .chat-bubble-assistant h3 {
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   margin: 12px 0 6px 0;
-  color: var(--color-ink);
 }
 
 .chat-bubble-assistant ul {
@@ -338,33 +605,39 @@ input[type=range]::-webkit-slider-thumb {
 }
 
 .prompt-pill {
-  background-color: var(--color-bone);
-  border: 1px solid var(--color-stone);
-  color: var(--color-ink);
-  padding: 6px 12px;
+  background-color: var(--bg-surface-elevated);
+  border: var(--border-hairline);
+  color: var(--color-text-primary);
+  padding: 7px 14px;
   font-size: 12px;
-  border-radius: var(--radius);
+  border-radius: var(--radius-pill);
   cursor: pointer;
-  transition: background-color 150ms ease, border-color 150ms ease;
+  transition: all 150ms ease;
   text-align: left;
 }
 
 .prompt-pill:hover {
-  background-color: var(--color-linen);
-  border-color: var(--color-ink);
+  border-color: var(--color-border-hover);
+  background-color: var(--bg-surface-hover);
 }
 
-/* Print Layout */
+/* ==========================================================================
+   11. PRINT STYLES (OFFICIAL CONSULTATION RECORD)
+   ========================================================================= */
 @media print {
-  header, nav, .view-switcher, #tab-benchmark, #tab-axioms, #tab-guidelines, #pdf-dropzone, #intake-form, #chat-input-area, .btn-print, footer {
+  header, nav, .view-switcher-pill, .theme-toggle-btn, #pdf-dropzone, #intake-form, .cohort-pill-btn, #btn-print, footer, .audit-accordion {
     display: none !important;
   }
   body {
-    background: white !important;
-    color: black !important;
+    background: #ffffff !important;
+    color: #000000 !important;
   }
-  .paper-card {
-    border: 1px solid #ccc !important;
+  .report-hero-card, .report-prescription-box, .feature-card {
+    border: 1px solid #cccccc !important;
     box-shadow: none !important;
+    background: #ffffff !important;
+  }
+  .lg\:col-span-7 {
+    width: 100% !important;
   }
 }
